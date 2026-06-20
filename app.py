@@ -44,6 +44,13 @@ st.markdown("""
         border: 1px solid #E2E8F0;
         text-align: center;
         margin-bottom: 30px;
+        color: #0F172A !important;
+    }
+    .hero-container h1, .hero-container h2, .hero-container h3, .hero-container h4, .hero-container h5, .hero-container h6 {
+        color: #1E3A8A !important;
+    }
+    .hero-container p, .hero-container span, .hero-container div {
+        color: #334155 !important;
     }
     .metric-card {
         background-color: #FFFFFF;
@@ -198,6 +205,33 @@ with st.sidebar:
         st.toast("Profile updated in memory!")
         
     st.markdown("---")
+    st.markdown("### 📥 Presentation Assets")
+    thumbnail_path = "assets/thumbnail.png"
+    arch_path = "assets/architecture.png"
+    
+    if os.path.exists(thumbnail_path):
+        with open(thumbnail_path, "rb") as file:
+            st.download_button(
+                label="🖼️ Download Thumbnail (PNG)",
+                data=file,
+                file_name="thumbnail.png",
+                mime="image/png",
+                key="dl_thumb",
+                use_container_width=True
+            )
+            
+    if os.path.exists(arch_path):
+        with open(arch_path, "rb") as file:
+            st.download_button(
+                label="📊 Download Architecture (PNG)",
+                data=file,
+                file_name="architecture.png",
+                mime="image/png",
+                key="dl_arch",
+                use_container_width=True
+            )
+            
+    st.markdown("---")
     
     # API Status Check
     api_loaded = controller.api_key is not None
@@ -225,33 +259,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Display covers or thumbnails if available
-thumbnail_path = "assets/thumbnail.png"
-arch_path = "assets/architecture.png"
 
-col_thumb, col_arch = st.columns(2)
-with col_thumb:
-    if os.path.exists(thumbnail_path):
-        st.image(thumbnail_path, use_column_width=True, caption=trans.get("logo_caption", lang_code))
-        with open(thumbnail_path, "rb") as file:
-            st.download_button(
-                label="💾 " + trans.get("logo_caption", lang_code) + " (PNG)",
-                data=file,
-                file_name="thumbnail.png",
-                mime="image/png",
-                use_container_width=True
-            )
-with col_arch:
-    if os.path.exists(arch_path):
-        st.image(arch_path, use_column_width=True, caption="CrisisAssist AI System Architecture")
-        with open(arch_path, "rb") as file:
-            st.download_button(
-                label="💾 Download System Architecture (PNG)",
-                data=file,
-                file_name="architecture.png",
-                mime="image/png",
-                use_container_width=True
-            )
 
 tab_console, tab_dashboard = st.tabs([
     f"🎮 {trans.get('input_header', lang_code)}", 
@@ -402,12 +410,12 @@ with tab_console:
                     phone_badge = "badge-ok" if v.get("checks", {}).get("phone_valid", True) else "badge-fail"
                     
                     st.markdown(f"""
-                    <div style='background-color: #F8FAFC; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #10B981;'>
-                        <strong>{idx+1}. {r['name']}</strong> (Verification score: <code>{v_score}%</code>)<br>
-                        Address: {r['address']} | Contact: <code>{r['phone']}</code><br>
-                        Status: <span class='status-badge {status_badge}'>{r['status']}</span> | 
-                        Freshness: <span class='status-badge {fresh_badge}'>FRESH</span> | 
-                        Contact Format: <span class='status-badge {phone_badge}'>VERIFIED</span>
+                    <div style='background-color: #F8FAFC; color: #0F172A; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #10B981;'>
+                        <strong style='color: #1E3A8A;'>{idx+1}. {r['name']}</strong> (Verification score: <code style='color: #0F172A; background-color: #E2E8F0; padding: 2px 4px; border-radius: 4px;'>{v_score}%</code>)<br>
+                        <span style='color: #334155;'>Address: {r['address']} | Contact: <code style='color: #0F172A; background-color: #E2E8F0; padding: 2px 4px; border-radius: 4px;'>{r['phone']}</code></span><br>
+                        <span style='color: #475569; font-weight: 500;'>Status:</span> <span class='status-badge {status_badge}'>{r['status']}</span> | 
+                        <span style='color: #475569; font-weight: 500;'>Freshness:</span> <span class='status-badge {fresh_badge}'>FRESH</span> | 
+                        <span style='color: #475569; font-weight: 500;'>Contact Format:</span> <span class='status-badge {phone_badge}'>VERIFIED</span>
                     </div>
                     """, unsafe_allow_html=True)
             else:
