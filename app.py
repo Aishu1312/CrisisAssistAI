@@ -204,34 +204,7 @@ with st.sidebar:
         })
         st.toast("Profile updated in memory!")
         
-    st.markdown("---")
-    st.markdown("### 📥 Presentation Assets")
-    thumbnail_path = "assets/thumbnail.png"
-    arch_path = "assets/architecture.png"
-    
-    if os.path.exists(thumbnail_path):
-        with open(thumbnail_path, "rb") as file:
-            st.download_button(
-                label="🖼️ Download Thumbnail (PNG)",
-                data=file,
-                file_name="thumbnail.png",
-                mime="image/png",
-                key="dl_thumb",
-                use_container_width=True
-            )
-            
-    if os.path.exists(arch_path):
-        with open(arch_path, "rb") as file:
-            st.download_button(
-                label="📊 Download Architecture (PNG)",
-                data=file,
-                file_name="architecture.png",
-                mime="image/png",
-                key="dl_arch",
-                use_container_width=True
-            )
-            
-    st.markdown("---")
+
     
     # API Status Check
     api_loaded = controller.api_key is not None
