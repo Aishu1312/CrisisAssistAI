@@ -9,8 +9,8 @@ if hasattr(sys.stdout, "reconfigure"):
 elif hasattr(sys.stdout, "buffer"):
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 
-# Ensure parent directory is in path
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Add project folder to sys.path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "project")))
 
 from main_agent import MainAgentController
 

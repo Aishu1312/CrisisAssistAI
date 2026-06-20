@@ -1,10 +1,9 @@
 import streamlit as st
 import os
 import sys
-import time
 
-# Ensure parent directory is in path for relative imports
-sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+# Add project folder to sys.path to resolve imports correctly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "project")))
 
 from main_agent import MainAgentController
 from dashboard.logs_dashboard import LogsDashboard
