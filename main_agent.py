@@ -209,9 +209,19 @@ class MainAgentController:
         )
         
         translated_output = final_text
+        decision_raw = (
+            f"- User message detected as '{detected_lang.upper()}' language.\n"
+            f"- Emergency priority classified as **{priority_tier}** (Score: {priority_score}).\n"
+            f"- Situation mapped to category: **{category}**.\n"
+            f"- Geocoded coordinates: {coords} ({detected_city.upper()}).\n"
+            f"- Safety Validation Score: **{eval_score * 100}%**."
+        )
+        decision_translated = decision_raw
+        
         if target_lang_code != "en":
             self.session_memory.add_step("MainController", f"Translating output to {target_lang_code}", "STARTED")
             translated_output = self.translation_tool.translate(final_text, "en", target_lang_code)
+            decision_translated = self.translation_tool.translate(decision_raw, "en", target_lang_code)
             self.session_memory.add_step("MainController", "Translation complete", "COMPLETED")
             
         # TTS synthesis
@@ -259,11 +269,5 @@ class MainAgentController:
             "verified_resources": verified_resources,
             "eval_score": eval_score,
             "duration_ms": total_duration,
-            "decision_explanation": (
-                f"- User message detected as '{detected_lang.upper()}' language.\n"
-                f"- Emergency priority classified as **{priority_tier}** (Score: {priority_score}).\n"
-                f"- Situation mapped to category: **{category}**.\n"
-                f"- Geocoded coordinates: {coords} ({detected_city.upper()}).\n"
-                f"- Safety Validation Score: **{eval_score * 100}%**."
-            )
+            "decision_explanation": decision_translated
         }

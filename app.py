@@ -145,14 +145,14 @@ with st.sidebar:
     else:
         st.image("https://img.icons8.com/color/96/emergency-siren.png", width=64)
         
-    st.title("CrisisAssist AI")
-    st.caption("Branded Multi-Agent Triage Platform")
+    st.title(trans.get("title", lang_code))
+    st.caption(trans.get("tagline", lang_code))
     st.markdown("---")
 
     # 1. 28 Languages selection
     lang_map = trans.get_supported_languages()
     selected_lang_name = st.selectbox(
-        "🌐 Language / भाषा / ॲप भाषा",
+        f"🌐 {trans.get('lang_selector', lang_code)}",
         list(lang_map.values()),
         index=list(lang_map.values()).index("English")
     )
@@ -221,7 +221,15 @@ st.markdown(f"""
 # Display covers or thumbnails if available
 thumbnail_path = "assets/thumbnail.png"
 if os.path.exists(thumbnail_path):
-    st.image(thumbnail_path, use_column_width=True, caption="CrisisAssist AI Telemetry Platform")
+    st.image(thumbnail_path, use_column_width=True, caption=trans.get("logo_caption", lang_code))
+    with open(thumbnail_path, "rb") as file:
+        st.download_button(
+            label="💾 " + trans.get("logo_caption", lang_code) + " (PNG)",
+            data=file,
+            file_name="thumbnail.png",
+            mime="image/png",
+            use_container_width=True
+        )
 
 tab_console, tab_dashboard = st.tabs([
     f"🎮 {trans.get('input_header', lang_code)}", 
@@ -259,19 +267,19 @@ with tab_console:
                 temp_path = "temp_uploaded.wav"
                 with open(temp_path, "wb") as f:
                     f.write(audio_file.read())
-                st.info("Transcribing audio input...")
+                st.info(trans.get("transcribing_voice", lang_code))
                 query = controller.voice_tool.speech_to_text(temp_path)
                 if not query:
-                    st.error("STT transcription failed. Falling back to text.")
+                    st.error(trans.get("stt_failed", lang_code))
                     query = user_text
             elif uploaded_audio:
                 temp_path = "temp_uploaded.wav"
                 with open(temp_path, "wb") as f:
                     f.write(uploaded_audio.read())
-                st.info("Transcribing audio file...")
+                st.info(trans.get("transcribing_file", lang_code))
                 query = controller.voice_tool.speech_to_text(temp_path)
                 if not query:
-                    st.error("Audio transcription failed.")
+                    st.error(trans.get("audio_failed", lang_code))
                     query = user_text
             else:
                 query = user_text
@@ -279,7 +287,7 @@ with tab_console:
             if not query:
                 st.error(trans.get("err_empty_query", lang_code))
             else:
-                with st.spinner("Processing Request..."):
+                with st.spinner(trans.get("processing_request", lang_code)):
                     # Process via orchestrator
                     result = controller.process_emergency_request(query, lang_code)
                     st.session_state.result = result
@@ -288,21 +296,24 @@ with tab_console:
         # Render Memory status Card
         st.markdown(f"### 💾 {trans.get('memory_header', lang_code)}")
         profile = controller.user_memory.get_profile()
-        st.markdown(f"**Name:** {profile.get('name')}")
-        st.markdown(f"**Preferred Location:** `{profile.get('home_location')}`")
-        st.markdown(f"**Medical Alerts:** `{profile.get('medical_alerts')}`")
+        st.markdown(f"**{trans.get('name_label', lang_code)}:** {profile.get('name')}")
+        st.markdown(f"**{trans.get('default_loc_label', lang_code)}:** `{profile.get('home_location')}`")
+        st.markdown(f"**{trans.get('medical_alerts_label', lang_code)}:** `{profile.get('medical_alerts')}`")
         
         past_queries = profile.get("past_emergency_summaries", [])
         if past_queries:
-            st.markdown("**Past Request Memory Context:**")
+            st.markdown(f"**{trans.get('past_mem_context', lang_code)}**")
             for q in past_queries:
-                st.markdown(f"- *{q.get('category')}* (Priority: `{q.get('priority')}`): {q.get('summary')}")
+                cat_raw = q.get('category', 'General Support')
+                cat_key = "category_" + cat_raw.lower().replace(" & ", "_").replace(" ", "_")
+                cat_translated = trans.get(cat_key, lang_code)
+                st.markdown(f"- *{cat_translated}* ({trans.get('priority_label', lang_code)}: `{q.get('priority')}`): {q.get('summary')}")
 
     with col_response:
         res = st.session_state.result
         
         # Real-time Agent workflow nodes visualization
-        st.markdown("### 🤖 Agent Pipeline Status")
+        st.markdown(f"### {trans.get('agent_pipeline_status', lang_code)}")
         active_state = controller.session_memory.active_agent
         
         # Calculate states
@@ -312,19 +323,19 @@ with tab_console:
         
         st.markdown(f"""
         <div class='agent-status-container'>
-            <div class='agent-node {planner_class}'>📝 Planner Agent</div>
+            <div class='agent-node {planner_class}'>📝 {trans.get('planner_agent_node', lang_code)}</div>
             <div style='font-size: 1.2rem; color: #64748B;'>➡️</div>
-            <div class='agent-node {worker_class}'>⚙️ Worker Agent</div>
+            <div class='agent-node {worker_class}'>⚙️ {trans.get('worker_agent_node', lang_code)}</div>
             <div style='font-size: 1.2rem; color: #64748B;'>➡️</div>
-            <div class='agent-node {evaluator_class}'>🛡️ Evaluator Agent</div>
+            <div class='agent-node {evaluator_class}'>🛡️ {trans.get('evaluator_agent_node', lang_code)}</div>
         </div>
         """, unsafe_allow_html=True)
 
         if not res:
-            st.info("Submit an emergency request to view recommendations and agent execution plans.")
+            st.info(trans.get("prompt_submit_request", lang_code))
         else:
             # 1. Main Actionable Advice
-            st.markdown(f"### 📣 Actionable Advice")
+            st.markdown(f"### {trans.get('actionable_advice', lang_code)}")
             st.markdown(res["response"])
             
             # Speech player
@@ -334,13 +345,13 @@ with tab_console:
             st.markdown("---")
 
             # 2. Key Observability Status Cards
-            st.markdown("### 🚨 Emergency Telemetry Cards")
+            st.markdown(f"### {trans.get('telemetry_cards', lang_code)}")
             sc1, sc2 = st.columns(2)
             with sc1:
                 st.markdown(f"""
                 <div class='metric-card'>
                     <div class='metric-label'>{trans.get('status_label', lang_code)}</div>
-                    <div class='metric-value' style='color: #059669;'>VERIFIED</div>
+                    <div class='metric-value' style='color: #059669;'>{trans.get('status_verified', lang_code)}</div>
                 </div>
                 """, unsafe_allow_html=True)
             with sc2:
@@ -378,7 +389,7 @@ with tab_console:
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info("No emergency centers resolved.")
+                st.info(trans.get("no_resources", lang_code))
 
             st.markdown("---")
 
