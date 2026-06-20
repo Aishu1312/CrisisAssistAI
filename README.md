@@ -51,32 +51,6 @@ This system guarantees that every response is verified, safe, and tailored befor
 - **Data & Logs:** JSON & JSONL local file-based database for user profiles and telemetry tracking.
 - **Source Control:** Git & GitHub
 
-## Installation
-
-To run CrisisAssist AI locally, follow these steps:
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Aishu1312/CrisisAssistAI.git
-   cd CrisisAssistAI
-   ```
-
-2. Create a virtual environment and activate it:
-   ```bash
-   python -m venv .venv
-   .venv\Scripts\activate
-   ```
-
-3. Install the dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. Set up your environment variables:
-   Create a `.env` file in the root directory and add your Google API key:
-   ```env
-   GEMINI_API_KEY="your-api-key-here"
-   ```
 
 ## Usage
 
