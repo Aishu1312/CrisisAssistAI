@@ -138,6 +138,12 @@ controller = st.session_state.controller
 # SIDEBAR BRANDING & CONFIGURATION
 # ==================================================
 with st.sidebar:
+    # 1. 28 Languages selection setup
+    lang_map = trans.get_supported_languages()
+    if "lang_code" not in st.session_state:
+        st.session_state.lang_code = "en"
+    lang_code = st.session_state.lang_code
+
     # Render custom logo
     logo_path = "assets/logo.png"
     if os.path.exists(logo_path):
@@ -149,17 +155,18 @@ with st.sidebar:
     st.caption(trans.get("tagline", lang_code))
     st.markdown("---")
 
-    # 1. 28 Languages selection
-    lang_map = trans.get_supported_languages()
     selected_lang_name = st.selectbox(
         f"🌐 {trans.get('lang_selector', lang_code)}",
         list(lang_map.values()),
-        index=list(lang_map.values()).index("English")
+        index=list(lang_map.values()).index(lang_map[lang_code])
     )
     
-    # Retrieve lang code
-    lang_code = [k for k, v in lang_map.items() if v == selected_lang_name][0]
-    
+    # Retrieve lang code and update state
+    new_lang_code = [k for k, v in lang_map.items() if v == selected_lang_name][0]
+    if new_lang_code != lang_code:
+        st.session_state.lang_code = new_lang_code
+        st.rerun()
+        
     # Load localized labels
     labels = trans.loader.get_labels(lang_code)
 
@@ -220,16 +227,31 @@ st.markdown(f"""
 
 # Display covers or thumbnails if available
 thumbnail_path = "assets/thumbnail.png"
-if os.path.exists(thumbnail_path):
-    st.image(thumbnail_path, use_column_width=True, caption=trans.get("logo_caption", lang_code))
-    with open(thumbnail_path, "rb") as file:
-        st.download_button(
-            label="💾 " + trans.get("logo_caption", lang_code) + " (PNG)",
-            data=file,
-            file_name="thumbnail.png",
-            mime="image/png",
-            use_container_width=True
-        )
+arch_path = "assets/architecture.png"
+
+col_thumb, col_arch = st.columns(2)
+with col_thumb:
+    if os.path.exists(thumbnail_path):
+        st.image(thumbnail_path, use_column_width=True, caption=trans.get("logo_caption", lang_code))
+        with open(thumbnail_path, "rb") as file:
+            st.download_button(
+                label="💾 " + trans.get("logo_caption", lang_code) + " (PNG)",
+                data=file,
+                file_name="thumbnail.png",
+                mime="image/png",
+                use_container_width=True
+            )
+with col_arch:
+    if os.path.exists(arch_path):
+        st.image(arch_path, use_column_width=True, caption="CrisisAssist AI System Architecture")
+        with open(arch_path, "rb") as file:
+            st.download_button(
+                label="💾 Download System Architecture (PNG)",
+                data=file,
+                file_name="architecture.png",
+                mime="image/png",
+                use_container_width=True
+            )
 
 tab_console, tab_dashboard = st.tabs([
     f"🎮 {trans.get('input_header', lang_code)}", 
