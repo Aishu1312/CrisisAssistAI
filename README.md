@@ -39,27 +39,6 @@ CrisisAssist AI orchestrates a collaborative pipeline of specialized sub-agents 
 - **Data & Logs:** JSON & JSONL local file-based database for user profiles and telemetry tracking.
 - **Source Control:** Git & GitHub
 
-
-## Usage
-
-### Running the Streamlit Application
-Start the main application dashboard:
-```bash
-streamlit run app.py
-```
-
-### Running the Telemetry Dashboard
-Launch the observability log visualizer:
-```bash
-streamlit run dashboard/logs_dashboard.py
-```
-
-### Running the CLI/Console Demo
-To test the multi-agent execution pipeline in your console:
-```bash
-python run_demo.py
-```
-
 ## Future Scope
 
 - **Offline Sync & Mesh Networks:** Implement local peer-to-peer data syncing for complete network blackouts.
