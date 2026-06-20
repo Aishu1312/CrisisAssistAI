@@ -159,6 +159,8 @@ class MainAgentController:
         draft_guidelines = worker_payload.get("guidelines", "")
         verified_resources = worker_payload.get("verified_resources", [])
         tool_logs = worker_payload.get("tool_execution_log", [])
+        detected_city = worker_payload.get("detected_city", "Unknown")
+        coords = worker_payload.get("coordinates", (0.0, 0.0))
         
         # Log all tool outputs to session activity timeline
         for log in tool_logs:
