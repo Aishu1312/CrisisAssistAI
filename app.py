@@ -119,76 +119,115 @@ with st.sidebar:
     # Read user profile memory
     profile = controller.user_memory.get_profile()
     
-    user_name = st.text_input(trans.get("name_label", lang_code), value=profile.get("name", ""), placeholder="E.g., Aishwarya")
-    
-    # Manual location input without fake/hardcoded default value
-    profile_loc = profile.get("location", "")
-    home_loc = st.text_input(trans.get("default_loc_label", lang_code), value=profile_loc, placeholder="E.g., Pune, Maharashtra")
-    
-    # If the user changed the location input manually, update our geocoded location status
-    if home_loc != profile_loc:
-        if home_loc.strip():
-            st.session_state.active_location = detector.parse_manual_location(home_loc)
+    # Initialize session state keys for reactive updates
+    if "profile_name" not in st.session_state:
+        st.session_state.profile_name = profile.get("name", "")
+    if "profile_location" not in st.session_state:
+        st.session_state.profile_location = profile.get("location", "")
+        
+    if "profile_allergies" not in st.session_state:
+        allergies_list = profile.get("allergies", [])
+        if isinstance(allergies_list, list):
+            st.session_state.profile_allergies = ", ".join(allergies_list) if allergies_list else ""
+        else:
+            st.session_state.profile_allergies = str(allergies_list)
+            
+    if "profile_conditions" not in st.session_state:
+        conditions_list = profile.get("medical_conditions", [])
+        if isinstance(conditions_list, list):
+            st.session_state.profile_conditions = ", ".join(conditions_list) if conditions_list else ""
+        else:
+            st.session_state.profile_conditions = str(conditions_list)
+            
+    if "profile_contact_name" not in st.session_state:
+        st.session_state.profile_contact_name = profile.get("emergency_contact", {}).get("name", "")
+    if "profile_contact_phone" not in st.session_state:
+        st.session_state.profile_contact_phone = profile.get("emergency_contact", {}).get("phone", "")
+        
+    def on_profile_change():
+        raw_name = st.session_state.get("profile_name", "")
+        raw_loc = st.session_state.get("profile_location", "")
+        raw_allergies = st.session_state.get("profile_allergies", "")
+        raw_conditions = st.session_state.get("profile_conditions", "")
+        raw_contact_name = st.session_state.get("profile_contact_name", "")
+        raw_contact_phone = st.session_state.get("profile_contact_phone", "")
+        
+        parsed_allergies = [a.strip() for a in raw_allergies.split(",") if a.strip()]
+        parsed_conditions = [c.strip() for c in raw_conditions.split(",") if c.strip()]
+        
+        # Immediate location update and geocoding
+        if raw_loc.strip():
+            st.session_state.active_location = detector.parse_manual_location(raw_loc)
         else:
             st.session_state.active_location = detector.detect_from_ip()
-        controller.user_memory.update_profile({"location": home_loc})
-        st.toast(f"Location updated manually to {home_loc if home_loc else 'Not provided'}")
-        
-    # Allergies
-    allergies_list = profile.get("allergies", [])
-    if isinstance(allergies_list, list):
-        allergies_str = ", ".join(allergies_list) if allergies_list else ""
-    else:
-        allergies_str = str(allergies_list)
-    medical_alerts = st.text_area(trans.get("medical_alerts_label", lang_code), value=allergies_str, placeholder="E.g., Asthma")
+            
+        controller.user_memory.update_profile({
+            "name": raw_name,
+            "location": raw_loc,
+            "allergies": parsed_allergies,
+            "medical_alerts": raw_allergies,
+            "medical_conditions": parsed_conditions,
+            "contact_name": raw_contact_name,
+            "contact_phone": raw_contact_phone,
+            "emergency_contact": {
+                "name": raw_contact_name,
+                "phone": raw_contact_phone
+            }
+        })
+        st.toast("Profile updated in memory!")
+
+    user_name = st.text_input(
+        trans.get("name_label", lang_code), 
+        placeholder="E.g., Aishwarya", 
+        key="profile_name", 
+        on_change=on_profile_change
+    )
     
-    # Medical conditions
-    conditions_list = profile.get("medical_conditions", [])
-    if isinstance(conditions_list, list):
-        conditions_str = ", ".join(conditions_list) if conditions_list else ""
-    else:
-        conditions_str = str(conditions_list)
-        
+    home_loc = st.text_input(
+        trans.get("default_loc_label", lang_code), 
+        placeholder="E.g., Pune, Maharashtra", 
+        key="profile_location", 
+        on_change=on_profile_change
+    )
+    
+    medical_alerts = st.text_area(
+        trans.get("medical_alerts_label", lang_code), 
+        placeholder="E.g., Asthma", 
+        key="profile_allergies", 
+        on_change=on_profile_change
+    )
+    
     conditions_label = trans.get("medical_conditions_label", lang_code)
     if conditions_label == "medical_conditions_label":
         conditions_label = "Medical Conditions"
-    medical_conditions_input = st.text_area(conditions_label, value=conditions_str, placeholder="E.g., Diabetes")
+    medical_conditions_input = st.text_area(
+        conditions_label, 
+        placeholder="E.g., Diabetes", 
+        key="profile_conditions", 
+        on_change=on_profile_change
+    )
     
     st.markdown(f"**{trans.get('contact_name_label', lang_code)} / Contact:**")
-    contact_name = st.text_input(trans.get("contact_name_label", lang_code), value=profile.get("emergency_contact", {}).get("name", ""), placeholder="E.g., Rahul")
-    contact_phone = st.text_input(trans.get("contact_phone_label", lang_code), value=profile.get("emergency_contact", {}).get("phone", ""), placeholder="E.g., 9999999999")
+    contact_name = st.text_input(
+        trans.get("contact_name_label", lang_code), 
+        placeholder="E.g., Rahul", 
+        key="profile_contact_name", 
+        on_change=on_profile_change
+    )
+    contact_phone = st.text_input(
+        trans.get("contact_phone_label", lang_code), 
+        placeholder="E.g., 9999999999", 
+        key="profile_contact_phone", 
+        on_change=on_profile_change
+    )
     
     # Save profile parameters with stacked buttons: Save Profile and Update Profile
     if st.button("💾 Save Profile", use_container_width=True):
-        parsed_allergies = [a.strip() for a in medical_alerts.split(",") if a.strip()]
-        parsed_conditions = [c.strip() for c in medical_conditions_input.split(",") if c.strip()]
-        controller.user_memory.update_profile({
-            "name": user_name,
-            "preferred_language": selected_lang_name,
-            "location": home_loc,
-            "allergies": parsed_allergies,
-            "medical_conditions": parsed_conditions,
-            "emergency_contact": {
-                "name": contact_name,
-                "phone": contact_phone
-            }
-        })
+        on_profile_change()
         st.success("✅ Profile saved successfully")
         
     if st.button("🔄 Update Profile", use_container_width=True):
-        parsed_allergies = [a.strip() for a in medical_alerts.split(",") if a.strip()]
-        parsed_conditions = [c.strip() for c in medical_conditions_input.split(",") if c.strip()]
-        controller.user_memory.update_profile({
-            "name": user_name,
-            "preferred_language": selected_lang_name,
-            "location": home_loc,
-            "allergies": parsed_allergies,
-            "medical_conditions": parsed_conditions,
-            "emergency_contact": {
-                "name": contact_name,
-                "phone": contact_phone
-            }
-        })
+        on_profile_change()
         st.toast("Profile updated in memory!")
         time.sleep(0.5)
         st.rerun()
@@ -298,28 +337,14 @@ with tab_console:
                     st.session_state.result = result
                     st.rerun()
 
-        # Render Memory status Card
-        profile = controller.user_memory.get_profile()
-        name = (profile.get("name") or "").strip() or "Not provided"
-        location = (profile.get("location") or profile.get("home_location") or "").strip() or "Not provided"
+        # Render Memory status Card directly from session state keys for immediate UI updates
+        name = st.session_state.get("profile_name", "").strip() or "Not provided"
+        location = st.session_state.get("profile_location", "").strip() or "Not provided"
+        allergies = st.session_state.get("profile_allergies", "").strip() or "Not provided"
+        conditions = st.session_state.get("profile_conditions", "").strip() or "Not provided"
         
-        # Allergies / Medical Alerts
-        allergies_raw = profile.get("allergies", [])
-        if isinstance(allergies_raw, list):
-            allergies = ", ".join(allergies_raw).strip() if allergies_raw else "Not provided"
-        else:
-            allergies = str(allergies_raw).strip() or "Not provided"
-            
-        # Medical Conditions
-        conditions_raw = profile.get("medical_conditions", [])
-        if isinstance(conditions_raw, list):
-            conditions = ", ".join(conditions_raw).strip() if conditions_raw else "Not provided"
-        else:
-            conditions = str(conditions_raw).strip() or "Not provided"
-            
-        contact = profile.get("emergency_contact", {})
-        contact_name = (contact.get("name") or "").strip()
-        contact_phone = (contact.get("phone") or "").strip()
+        contact_name = st.session_state.get("profile_contact_name", "").strip()
+        contact_phone = st.session_state.get("profile_contact_phone", "").strip()
         
         if contact_name and contact_phone:
             contact_display = f"{contact_name} ({contact_phone})"

@@ -15,13 +15,17 @@ class UserMemory:
     def load_default_profile(self) -> Dict[str, Any]:
         return {
             "name": "",
+            "location": "",
+            "home_location": "",
+            "medical_alerts": "",
             "allergies": [],
             "medical_conditions": [],
+            "contact_name": "",
+            "contact_phone": "",
             "emergency_contact": {
                 "name": "",
                 "phone": ""
             },
-            "location": "",
             "preferred_language": "English",
             "past_emergency_summaries": []
         }
@@ -48,19 +52,54 @@ class UserMemory:
                     self.profile["emergency_contact"]["name"] = ""
                 if self.profile.get("emergency_contact", {}).get("phone") in mock_phones:
                     self.profile["emergency_contact"]["phone"] = ""
+                if self.profile.get("contact_name") in mock_names:
+                    self.profile["contact_name"] = ""
+                if self.profile.get("contact_phone") in mock_phones:
+                    self.profile["contact_phone"] = ""
                 if "allergies" in self.profile:
                     self.profile["allergies"] = [a for a in self.profile["allergies"] if a not in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy"]]
                 if self.profile.get("medical_alerts") in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy"]:
                     self.profile["medical_alerts"] = ""
 
                 # Ensure backwards-compatibility mapping keys
-                if "home_location" in self.profile and "location" not in self.profile:
+                if "location" in self.profile:
+                    self.profile["home_location"] = self.profile["location"]
+                elif "home_location" in self.profile:
                     self.profile["location"] = self.profile["home_location"]
-                if "medical_alerts" in self.profile and "allergies" not in self.profile:
+                    
+                if "medical_alerts" in self.profile:
                     alerts = self.profile["medical_alerts"]
-                    self.profile["allergies"] = [a.strip() for a in alerts.split(",") if a.strip()]
+                    if isinstance(alerts, list):
+                        self.profile["medical_alerts"] = ", ".join(alerts)
+                        self.profile["allergies"] = alerts
+                    else:
+                        self.profile["medical_alerts"] = str(alerts)
+                        self.profile["allergies"] = [a.strip() for a in str(alerts).split(",") if a.strip()]
+                elif "allergies" in self.profile:
+                    alerts = self.profile["allergies"]
+                    if isinstance(alerts, list):
+                        self.profile["medical_alerts"] = ", ".join(alerts)
+                        self.profile["allergies"] = alerts
+                    else:
+                        self.profile["medical_alerts"] = str(alerts)
+                        self.profile["allergies"] = [a.strip() for a in str(alerts).split(",") if a.strip()]
+                
                 if "medical_conditions" not in self.profile:
                     self.profile["medical_conditions"] = []
+                    
+                contact = self.profile.get("emergency_contact", {})
+                if not isinstance(contact, dict):
+                    contact = {}
+                if "contact_name" in self.profile:
+                    contact["name"] = self.profile["contact_name"]
+                elif "name" in contact:
+                    self.profile["contact_name"] = contact["name"]
+                if "contact_phone" in self.profile:
+                    contact["phone"] = self.profile["contact_phone"]
+                elif "phone" in contact:
+                    self.profile["contact_phone"] = contact["phone"]
+                self.profile["emergency_contact"] = contact
+                
             except Exception as e:
                 print(f"Error loading user profile: {e}")
                 self.profile = self.load_default_profile()
@@ -81,16 +120,53 @@ class UserMemory:
         for key, val in updates.items():
             self.profile[key] = val
             
-        # Keep home_location and medical_alerts in sync for UI backward compatibility
+        # Ensure flat keys requested are stored
         if "location" in self.profile:
             self.profile["home_location"] = self.profile["location"]
-        if "allergies" in self.profile:
-            if isinstance(self.profile["allergies"], list):
-                self.profile["medical_alerts"] = ", ".join(self.profile["allergies"])
+            
+        # Keep medical_alerts and allergies list in sync based on what was updated
+        if "allergies" in updates:
+            allergies = updates["allergies"]
+            if isinstance(allergies, list):
+                self.profile["medical_alerts"] = ", ".join(allergies)
+                self.profile["allergies"] = allergies
             else:
-                self.profile["medical_alerts"] = str(self.profile["allergies"])
-                # Also convert allergies back to list if it was a string
-                self.profile["allergies"] = [a.strip() for a in str(self.profile["allergies"]).split(",") if a.strip()]
+                self.profile["medical_alerts"] = str(allergies)
+                self.profile["allergies"] = [a.strip() for a in str(allergies).split(",") if a.strip()]
+        elif "medical_alerts" in updates:
+            alerts = updates["medical_alerts"]
+            if isinstance(alerts, list):
+                self.profile["medical_alerts"] = ", ".join(alerts)
+                self.profile["allergies"] = alerts
+            else:
+                self.profile["medical_alerts"] = str(alerts)
+                self.profile["allergies"] = [a.strip() for a in str(alerts).split(",") if a.strip()]
+        else:
+            # Fallback sync if neither is in updates
+            if "allergies" in self.profile:
+                allergies = self.profile["allergies"]
+                if isinstance(allergies, list):
+                    self.profile["medical_alerts"] = ", ".join(allergies)
+                else:
+                    self.profile["medical_alerts"] = str(allergies)
+                    self.profile["allergies"] = [a.strip() for a in str(allergies).split(",") if a.strip()]
+
+        # Keep emergency_contact dict and contact_name/contact_phone flat keys in sync
+        contact = self.profile.get("emergency_contact", {})
+        if not isinstance(contact, dict):
+            contact = {}
+            
+        if "emergency_contact" in updates:
+            contact = updates["emergency_contact"]
+            self.profile["contact_name"] = contact.get("name", "")
+            self.profile["contact_phone"] = contact.get("phone", "")
+        else:
+            if "contact_name" in updates:
+                contact["name"] = updates["contact_name"]
+            if "contact_phone" in updates:
+                contact["phone"] = updates["contact_phone"]
+                
+        self.profile["emergency_contact"] = contact
         self.save_to_disk()
 
     def add_past_request(self, query: str, priority: str, category: str, summary: str):
