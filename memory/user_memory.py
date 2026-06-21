@@ -14,14 +14,14 @@ class UserMemory:
 
     def load_default_profile(self) -> Dict[str, Any]:
         return {
-            "name": "Jane Doe",
-            "allergies": ["Penicillin Allergy"],
+            "name": "",
+            "allergies": [],
             "medical_conditions": [],
             "emergency_contact": {
-                "name": "John Doe (Spouse)",
-                "phone": "+91-98765-43210"
+                "name": "",
+                "phone": ""
             },
-            "location": "Pune, Maharashtra",
+            "location": "",
             "preferred_language": "English",
             "past_emergency_summaries": []
         }
@@ -32,6 +32,27 @@ class UserMemory:
                 with open(self.filepath, "r", encoding="utf-8") as f:
                     self.profile = json.load(f)
                     
+                # Clean up legacy mock/default values
+                mock_names = ["Jane Doe"]
+                mock_contacts = ["John Doe (Spouse)"]
+                mock_phones = ["+91-98765-43210"]
+                mock_locations = ["Goa, Maharashtra", "Goa"]
+                
+                if self.profile.get("name") in mock_names:
+                    self.profile["name"] = ""
+                if self.profile.get("location") in mock_locations:
+                    self.profile["location"] = ""
+                if self.profile.get("home_location") in mock_locations:
+                    self.profile["home_location"] = ""
+                if self.profile.get("emergency_contact", {}).get("name") in mock_contacts:
+                    self.profile["emergency_contact"]["name"] = ""
+                if self.profile.get("emergency_contact", {}).get("phone") in mock_phones:
+                    self.profile["emergency_contact"]["phone"] = ""
+                if "allergies" in self.profile:
+                    self.profile["allergies"] = [a for a in self.profile["allergies"] if a not in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy"]]
+                if self.profile.get("medical_alerts") in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy"]:
+                    self.profile["medical_alerts"] = ""
+
                 # Ensure backwards-compatibility mapping keys
                 if "home_location" in self.profile and "location" not in self.profile:
                     self.profile["location"] = self.profile["home_location"]

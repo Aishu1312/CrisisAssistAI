@@ -18,27 +18,35 @@ class ContextEngineering:
         """
         extra = extra_context or {}
         
-        # User details with fallbacks
-        name = user_profile.get("name", "Jane Doe")
-        location = user_profile.get("location") or user_profile.get("home_location") or extra.get("location", "Pune, Maharashtra")
+        # User details with fallbacks (no fake/mock defaults)
+        name = (user_profile.get("name") or "").strip() or "Not provided"
+        location = (user_profile.get("location") or user_profile.get("home_location") or extra.get("location") or "").strip() or "Not provided"
         
         # Allergies: handle list or comma-separated string
-        allergies_raw = user_profile.get("allergies", ["None declared"])
+        allergies_raw = user_profile.get("allergies", [])
         if isinstance(allergies_raw, list):
-            allergies = ", ".join(allergies_raw) if allergies_raw else "None declared"
+            allergies = ", ".join(allergies_raw).strip() if allergies_raw else "Not provided"
         else:
-            allergies = str(allergies_raw)
+            allergies = str(allergies_raw).strip() or "Not provided"
             
         # Medical Conditions
         conditions_raw = user_profile.get("medical_conditions", [])
         if isinstance(conditions_raw, list):
-            conditions = ", ".join(conditions_raw) if conditions_raw else "None"
+            conditions = ", ".join(conditions_raw).strip() if conditions_raw else "Not provided"
         else:
-            conditions = str(conditions_raw)
+            conditions = str(conditions_raw).strip() or "Not provided"
 
         contact = user_profile.get("emergency_contact", {})
-        contact_name = contact.get("name", "John Doe")
-        contact_phone = contact.get("phone", "+91-98765-43210")
+        contact_name = (contact.get("name") or "").strip()
+        contact_phone = (contact.get("phone") or "").strip()
+        if contact_name and contact_phone:
+            contact_info = f"{contact_name} ({contact_phone})"
+        elif contact_name:
+            contact_info = contact_name
+        elif contact_phone:
+            contact_info = contact_phone
+        else:
+            contact_info = "Not provided"
 
         common_rules = (
             "SAFETY MANDATE: Never suggest unverified or dangerous actions. "
@@ -53,15 +61,18 @@ class ContextEngineering:
             f"- Current Location Context: {location}\n"
             f"- User Allergies / Medical Alerts: {allergies}\n"
             f"- Medical Conditions: {conditions}\n"
-            f"- Emergency Contact: {contact_name} ({contact_phone})\n"
+            f"- Emergency Contact: {contact_info}\n"
         )
         
         # Allergy safety rule
-        allergy_safety = (
-            f"CRITICAL MEDICAL CHECK: The user is allergic to {allergies}. "
-            "You must NEVER recommend any medications, treatments, or substances that trigger or conflict with these allergies (for example, if they are allergic to Penicillin, do not suggest administering penicillin, etc.). "
-            "Customize emergency guidelines to ensure compliance with this allergy restriction."
-        )
+        if allergies == "Not provided" or allergies.lower() in ["none", "none declared", "none specified"]:
+            allergy_safety = "Allergies: No known allergies declared by the user."
+        else:
+            allergy_safety = (
+                f"CRITICAL MEDICAL CHECK: The user is allergic to {allergies}. "
+                "You must NEVER recommend any medications, treatments, or substances that trigger or conflict with these allergies (for example, if they are allergic to Penicillin, do not suggest administering penicillin, etc.). "
+                "Customize emergency guidelines to ensure compliance with this allergy restriction."
+            )
 
         if role == "priority":
             return (

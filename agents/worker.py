@@ -31,7 +31,7 @@ class WorkerAgent:
         if not detected_city:
             detected_city = self.location_tool.parse_location(query)
             if detected_city == "other":
-                detected_city = user_profile.get("home_location", "Mumbai")
+                detected_city = user_profile.get("location") or user_profile.get("home_location") or "Mumbai"
         
         coords = plan_payload.get("coordinates")
         if not coords:

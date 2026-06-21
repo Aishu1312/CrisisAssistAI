@@ -74,13 +74,9 @@ if "active_location" not in st.session_state:
             st.session_state.browser_coords[0], 
             st.session_state.browser_coords[1]
         )
-        loc_str = f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}"
-        controller.user_memory.update_profile({"location": loc_str})
     else:
         # Priority 3: IP based location
         st.session_state.active_location = detector.detect_from_ip()
-        loc_str = f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}"
-        controller.user_memory.update_profile({"location": loc_str})
 
 # ==================================================
 # SIDEBAR BRANDING & CONFIGURATION
@@ -123,41 +119,44 @@ with st.sidebar:
     # Read user profile memory
     profile = controller.user_memory.get_profile()
     
-    user_name = st.text_input(trans.get("name_label", lang_code), value=profile.get("name", "Aisha"))
+    user_name = st.text_input(trans.get("name_label", lang_code), value=profile.get("name", ""), placeholder="E.g., Aishwarya")
     
-    # Priority 4: Manual location input fallback
-    default_manual_location = profile.get("location", f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}")
-    home_loc = st.text_input(trans.get("default_loc_label", lang_code), value=default_manual_location)
+    # Manual location input without fake/hardcoded default value
+    profile_loc = profile.get("location", "")
+    home_loc = st.text_input(trans.get("default_loc_label", lang_code), value=profile_loc, placeholder="E.g., Pune, Maharashtra")
     
     # If the user changed the location input manually, update our geocoded location status
-    if home_loc != default_manual_location:
-        st.session_state.active_location = detector.parse_manual_location(home_loc)
+    if home_loc != profile_loc:
+        if home_loc.strip():
+            st.session_state.active_location = detector.parse_manual_location(home_loc)
+        else:
+            st.session_state.active_location = detector.detect_from_ip()
         controller.user_memory.update_profile({"location": home_loc})
-        st.toast(f"Location updated manually to {home_loc}")
+        st.toast(f"Location updated manually to {home_loc if home_loc else 'Not provided'}")
         
     # Allergies
-    allergies_list = profile.get("allergies", ["Penicillin Allergy"])
+    allergies_list = profile.get("allergies", [])
     if isinstance(allergies_list, list):
-        allergies_str = ", ".join(allergies_list)
+        allergies_str = ", ".join(allergies_list) if allergies_list else ""
     else:
         allergies_str = str(allergies_list)
-    medical_alerts = st.text_area(trans.get("medical_alerts_label", lang_code), value=allergies_str)
+    medical_alerts = st.text_area(trans.get("medical_alerts_label", lang_code), value=allergies_str, placeholder="E.g., Asthma")
     
     # Medical conditions
     conditions_list = profile.get("medical_conditions", [])
     if isinstance(conditions_list, list):
-        conditions_str = ", ".join(conditions_list)
+        conditions_str = ", ".join(conditions_list) if conditions_list else ""
     else:
         conditions_str = str(conditions_list)
         
     conditions_label = trans.get("medical_conditions_label", lang_code)
     if conditions_label == "medical_conditions_label":
         conditions_label = "Medical Conditions"
-    medical_conditions_input = st.text_area(conditions_label, value=conditions_str)
+    medical_conditions_input = st.text_area(conditions_label, value=conditions_str, placeholder="E.g., Diabetes")
     
     st.markdown(f"**{trans.get('contact_name_label', lang_code)} / Contact:**")
-    contact_name = st.text_input(trans.get("contact_name_label", lang_code), value=profile.get("emergency_contact", {}).get("name", "Rahul"))
-    contact_phone = st.text_input(trans.get("contact_phone_label", lang_code), value=profile.get("emergency_contact", {}).get("phone", "+91-98765-43210"))
+    contact_name = st.text_input(trans.get("contact_name_label", lang_code), value=profile.get("emergency_contact", {}).get("name", ""), placeholder="E.g., Rahul")
+    contact_phone = st.text_input(trans.get("contact_phone_label", lang_code), value=profile.get("emergency_contact", {}).get("phone", ""), placeholder="E.g., 9999999999")
     
     # Save profile parameters with stacked buttons: Save Profile and Update Profile
     if st.button("💾 Save Profile", use_container_width=True):
@@ -301,26 +300,35 @@ with tab_console:
 
         # Render Memory status Card
         profile = controller.user_memory.get_profile()
-        name = profile.get("name", "Jane Doe")
-        location = profile.get("location") or profile.get("home_location", "Pune, Maharashtra")
+        name = (profile.get("name") or "").strip() or "Not provided"
+        location = (profile.get("location") or profile.get("home_location") or "").strip() or "Not provided"
         
         # Allergies / Medical Alerts
-        allergies_raw = profile.get("allergies", ["None declared"])
+        allergies_raw = profile.get("allergies", [])
         if isinstance(allergies_raw, list):
-            allergies = ", ".join(allergies_raw) if allergies_raw else "None declared"
+            allergies = ", ".join(allergies_raw).strip() if allergies_raw else "Not provided"
         else:
-            allergies = str(allergies_raw)
+            allergies = str(allergies_raw).strip() or "Not provided"
             
         # Medical Conditions
         conditions_raw = profile.get("medical_conditions", [])
         if isinstance(conditions_raw, list):
-            conditions = ", ".join(conditions_raw) if conditions_raw else "None"
+            conditions = ", ".join(conditions_raw).strip() if conditions_raw else "Not provided"
         else:
-            conditions = str(conditions_raw)
+            conditions = str(conditions_raw).strip() or "Not provided"
             
         contact = profile.get("emergency_contact", {})
-        contact_name = contact.get("name", "John Doe")
-        contact_phone = contact.get("phone", "+91-98765-43210")
+        contact_name = (contact.get("name") or "").strip()
+        contact_phone = (contact.get("phone") or "").strip()
+        
+        if contact_name and contact_phone:
+            contact_display = f"{contact_name} ({contact_phone})"
+        elif contact_name:
+            contact_display = contact_name
+        elif contact_phone:
+            contact_display = contact_phone
+        else:
+            contact_display = "Not provided"
         
         # Retrieve translation strings
         title_lbl = trans.get("current_user_memory_title", lang_code)
@@ -348,7 +356,7 @@ with tab_console:
                 <span style="font-weight: bold; color: #475569;">{conditions_lbl}:</span>
                 <span style="color: #0F172A;">{conditions}</span>
                 <span style="font-weight: bold; color: #475569;">Emergency Contact:</span>
-                <span style="color: #0F172A;">{contact_name} ({contact_phone})</span>
+                <span style="color: #0F172A;">{contact_display}</span>
             </div>
         </div>
         """
@@ -370,20 +378,55 @@ with tab_console:
         st.markdown(f"### {trans.get('agent_pipeline_status', lang_code)}")
         active_state = controller.session_memory.active_agent
         
-        # Calculate states
-        planner_class = "agent-node-active" if active_state == "planning" else ("agent-node-completed" if res else "agent-node")
-        worker_class = "agent-node-active" if active_state == "executing" else ("agent-node-completed" if res else "agent-node")
-        evaluator_class = "agent-node-active" if active_state == "validating" else ("agent-node-completed" if res else "agent-node")
-        
-        st.markdown(f"""
-        <div class='agent-status-container'>
-            <div class='agent-node {planner_class}'>📝 {trans.get('planner_agent_node', lang_code)}</div>
-            <div style='font-size: 1.2rem; color: #64748B;'>➡️</div>
-            <div class='agent-node {worker_class}'>⚙️ {trans.get('worker_agent_node', lang_code)}</div>
-            <div style='font-size: 1.2rem; color: #64748B;'>➡️</div>
-            <div class='agent-node {evaluator_class}'>🛡️ {trans.get('evaluator_agent_node', lang_code)}</div>
-        </div>
-        """, unsafe_allow_html=True)
+        # Determine states
+        if active_state == "planning":
+            planner_state, worker_state, evaluator_state = "active", "pending", "pending"
+        elif active_state == "executing":
+            planner_state, worker_state, evaluator_state = "completed", "active", "pending"
+        elif active_state == "validating":
+            planner_state, worker_state, evaluator_state = "completed", "completed", "active"
+        elif res is not None:
+            planner_state, worker_state, evaluator_state = "completed", "completed", "completed"
+        else:
+            planner_state, worker_state, evaluator_state = "pending", "pending", "pending"
+            
+        def get_agent_card_html(title, status_label, icon, state):
+            if state == 'active':
+                bg = "#EFF6FF"
+                border = "2px dashed #2563EB"
+                color = "#1E3A8A"
+                status_color = "#2563EB"
+                status_text = status_label
+            elif state == 'completed':
+                bg = "#ECFDF5"
+                border = "2px solid #10B981"
+                color = "#065F46"
+                status_color = "#10B981"
+                status_text = "Completed"
+            else:
+                bg = "#F8FAFC"
+                border = "1px solid #E2E8F0"
+                color = "#64748B"
+                status_color = "#94A3B8"
+                status_text = "Pending"
+                
+            return f"""
+            <div style="background-color: {bg}; border: {border}; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); min-height: 100px;">
+                <div style="font-size: 1.4rem; margin-bottom: 2px;">{icon}</div>
+                <div style="font-weight: bold; font-size: 0.95rem; color: {color};">{title}</div>
+                <div style="margin-top: 5px; font-size: 0.8rem; font-weight: bold; color: {status_color}; text-transform: uppercase; letter-spacing: 0.5px;">
+                    {status_text}
+                </div>
+            </div>
+            """
+            
+        col_p, col_w, col_e = st.columns(3)
+        with col_p:
+            st.markdown(get_agent_card_html(trans.get('planner_agent_node', lang_code), "Planning", "📝", planner_state), unsafe_allow_html=True)
+        with col_w:
+            st.markdown(get_agent_card_html(trans.get('worker_agent_node', lang_code), "Executing", "⚙️", worker_state), unsafe_allow_html=True)
+        with col_e:
+            st.markdown(get_agent_card_html(trans.get('evaluator_agent_node', lang_code), "Validating", "🛡️", evaluator_state), unsafe_allow_html=True)
 
         if not res:
             st.info(trans.get("prompt_submit_request", lang_code))
