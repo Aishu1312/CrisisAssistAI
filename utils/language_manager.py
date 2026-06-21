@@ -23,6 +23,11 @@ class LanguageManager:
             cls._instance._load_lang_file(cls._instance.fallback_lang)
         return cls._instance
 
+    def __init__(self):
+        # Clear cache to force reloading from disk on each app rerun/reload
+        self.cache.clear()
+        self._load_lang_file(self.fallback_lang)
+
     def _load_lang_file(self, lang_code: str) -> Dict[str, str]:
         if lang_code in self.cache:
             return self.cache[lang_code]

@@ -378,17 +378,27 @@ with tab_console:
         memory_card_html = f"""
         <div style="background-color: #F8FAFC; color: #0F172A; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <h4 style="margin-top: 0; color: #1E3A8A; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 10px;">👤 {title_lbl}</h4>
-            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; font-size: 0.95rem; margin-top: 10px;">
-                <span style="font-weight: bold; color: #475569;">{name_lbl}:</span>
-                <span style="color: #0F172A;">{name}</span>
-                <span style="font-weight: bold; color: #475569;">{loc_lbl}:</span>
-                <span style="color: #0F172A;">{location}</span>
-                <span style="font-weight: bold; color: #475569;">{alerts_lbl}:</span>
-                <span style="color: #DC2626; font-weight: bold;">{allergies}</span>
-                <span style="font-weight: bold; color: #475569;">{conditions_lbl}:</span>
-                <span style="color: #0F172A;">{conditions}</span>
-                <span style="font-weight: bold; color: #475569;">{trans.get("emergency_contact_label", lang_code)}:</span>
-                <span style="color: #0F172A;">{contact_display}</span>
+            <div style="font-size: 0.95rem; margin-top: 10px; line-height: 1.6;">
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{name_lbl}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{name}</span>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{loc_lbl}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{location}</span>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{alerts_lbl}:</span>
+                    <span style="color: #DC2626; font-weight: bold; flex: 1; min-width: 150px; word-break: break-word;">{allergies}</span>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{conditions_lbl}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{conditions}</span>
+                </div>
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{trans.get("emergency_contact_label", lang_code)}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{contact_display}</span>
+                </div>
             </div>
         </div>
         """
