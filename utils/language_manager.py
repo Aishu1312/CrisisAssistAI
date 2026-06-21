@@ -19,6 +19,7 @@ class LanguageManager:
             )
             cls._instance.cache = {}
             cls._instance.fallback_lang = "en"
+            cls._instance.loader = cls._instance
             cls._instance._load_lang_file(cls._instance.fallback_lang)
         return cls._instance
 

@@ -476,7 +476,7 @@ with st.sidebar:
         st.rerun()
         
     # Load localized labels
-    labels = trans.loader.get_labels(lang_code)
+    labels = trans.get_labels(lang_code)
 
     st.markdown(f"### ⚙️ {trans.get('pref_header', lang_code)}")
     
