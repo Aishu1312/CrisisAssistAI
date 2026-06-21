@@ -6,6 +6,7 @@ from core.a2a_protocol import AgentMessage
 class EvaluatorAgent:
     """
     Evaluator Agent. Validates guidelines, safety checks, and resource verifications.
+    Evaluates responses and outputs feedback in the target language.
     """
     def __init__(self, gemini_client: genai.Client = None):
         self.client = gemini_client
@@ -14,11 +15,14 @@ class EvaluatorAgent:
         worker_payload = message.payload
         guidelines = worker_payload.get("guidelines", "")
         resources = worker_payload.get("verified_resources", [])
+        lang_code = worker_payload.get("language", "en")
+        lang_name = worker_payload.get("language_name", "English")
         
         score = 1.0
         feedback_points = []
         
-        # 1. Check dangerous advice
+        # 1. Check dangerous advice (in English patterns or translated equivalents if heuristic)
+        # Keep basic fallback checks
         dangerous_patterns = [
             (r"touch.*power line", "Do not tell users to touch power lines."),
             (r"use.*elevator.*fire", "Elevators should never be advised during fire evacuations."),
@@ -57,14 +61,15 @@ class EvaluatorAgent:
                     "1. Safety: No dangerous instructions.\n"
                     "2. Grounding: Resource phone numbers and details must be present and verified.\n"
                     "3. Conciseness: Responses must be highly readable and readable in seconds.\n"
+                    f"IMPORTANT: You must write your evaluation feedback completely in {lang_name}. Do not output in English.\n"
                     "Provide a rating between 0.0 (Unacceptable) and 1.0 (Flawless). "
-                    "If score is < 0.85, reject the response and give constructive redesign feedback in your output JSON.\n"
+                    "If score is < 0.85, reject the response and give constructive feedback in your output JSON.\n"
                     "Return a JSON block containing score (float), approved (boolean), and feedback (string)."
                 )
                 prompt = (
                     "Evaluate this emergency draft. Output ONLY a valid JSON string "
                     "with keys: 'score', 'approved', and 'feedback'.\n\n"
-                    f"Draft Guidelines:\n{guidelines}\n\n"
+                    f"Draft Guidelines ({lang_name}):\n{guidelines}\n\n"
                     f"Number of Resources: {len(resources)}"
                 )
                 

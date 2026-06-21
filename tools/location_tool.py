@@ -1,107 +1,187 @@
 import re
+import datetime
 from typing import Dict, List, Any, Tuple
 
 class LocationTool:
     """
-    Parses emergency queries for locations and simulates geocoding and local search.
-    Provides verified mock data for major Indian cities (Mumbai, Pune, Delhi)
-    including hospitals, fire stations, police stations, and disaster shelters.
+    Unified Location and Resource lookup tool.
+    Provides geocoding, verified local resource search, and verification scoring.
     """
-    def __init__(self):
-        # Database of verified emergency locations
+    def __init__(self, current_date_str: str = "2026-06-20"):
+        try:
+            self.current_date = datetime.datetime.strptime(current_date_str, "%Y-%m-%d")
+        except ValueError:
+            self.current_date = datetime.datetime.now()
+
+        # Database of verified emergency locations (with coordinates, contact, and freshness metadata)
         self.location_db: Dict[str, Dict[str, Any]] = {
             "mumbai": {
                 "coords": (19.0760, 72.8777),
                 "hospitals": [
-                    {"name": "KEM Hospital", "address": "Acharya Donde Marg, Parel, Mumbai", "phone": "+91-22-2410-7000", "status": "OPERATIONAL", "distance_km": 1.2, "verified_at": "2026-06-20"},
-                    {"name": "Lilavati Hospital & Research Centre", "address": "A.S. Dixit Road, Bandra West, Mumbai", "phone": "+91-22-2675-1000", "status": "OPERATIONAL", "distance_km": 3.5, "verified_at": "2026-06-20"},
-                    {"name": "Fortis Hospital Mulund", "address": "Mulund Goregaon Link Road, Mumbai", "phone": "+91-22-6799-4100", "status": "OPERATIONAL", "distance_km": 8.0, "verified_at": "2026-06-19"}
+                    {"name": "KEM Hospital", "address": "Acharya Donde Marg, Parel, Mumbai", "phone": "+91-22-2410-7000", "status": "OPERATIONAL", "distance_km": 1.2, "verified_at": "2026-06-20", "coordinates": (19.0025, 72.8420)},
+                    {"name": "Lilavati Hospital & Research Centre", "address": "A.S. Dixit Road, Bandra West, Mumbai", "phone": "+91-22-2675-1000", "status": "OPERATIONAL", "distance_km": 3.5, "verified_at": "2026-06-20", "coordinates": (19.0514, 72.8300)},
+                    {"name": "Fortis Hospital Mulund", "address": "Mulund Goregaon Link Road, Mumbai", "phone": "+91-22-6799-4100", "status": "OPERATIONAL", "distance_km": 8.0, "verified_at": "2026-06-19", "coordinates": (19.1678, 72.9545)}
                 ],
                 "fire_stations": [
-                    {"name": "Byculla Fire Station", "address": "Babasaheb Ambedkar Road, Byculla, Mumbai", "phone": "+91-22-2308-5991", "status": "OPERATIONAL", "distance_km": 2.1, "verified_at": "2026-06-20"},
-                    {"name": "Bandra Fire Station", "address": "S.V. Road, Bandra West, Mumbai", "phone": "+91-22-2642-2222", "status": "OPERATIONAL", "distance_km": 4.0, "verified_at": "2026-06-20"}
+                    {"name": "Byculla Fire Station", "address": "Babasaheb Ambedkar Road, Byculla, Mumbai", "phone": "+91-22-2308-5991", "status": "OPERATIONAL", "distance_km": 2.1, "verified_at": "2026-06-20", "coordinates": (18.9749, 72.8354)},
+                    {"name": "Bandra Fire Station", "address": "S.V. Road, Bandra West, Mumbai", "phone": "+91-22-2642-2222", "status": "OPERATIONAL", "distance_km": 4.0, "verified_at": "2026-06-20", "coordinates": (19.0550, 72.8360)}
                 ],
                 "police_stations": [
-                    {"name": "Mumbai Police Head Office", "address": "Crawford Market, Fort, Mumbai", "phone": "+91-22-2262-0111", "status": "OPERATIONAL", "distance_km": 5.2, "verified_at": "2026-06-20"},
-                    {"name": "Bandra Police Station", "address": "Hill Road, Bandra West, Mumbai", "phone": "+91-22-2642-2779", "status": "OPERATIONAL", "distance_km": 3.8, "verified_at": "2026-06-20"}
+                    {"name": "Mumbai Police Head Office", "address": "Crawford Market, Fort, Mumbai", "phone": "+91-22-2262-0111", "status": "OPERATIONAL", "distance_km": 5.2, "verified_at": "2026-06-20", "coordinates": (18.9463, 72.8340)}
                 ],
                 "shelters": [
-                    {"name": "Dharavi Community Relief Shelter", "address": "Sector 3, Dharavi, Mumbai", "phone": "+91-22-2407-1234", "status": "OPEN", "capacity": "500 beds", "distance_km": 2.5, "verified_at": "2026-06-20"},
-                    {"name": "Chembur Sports Complex Shelter", "address": "St. Sebastian Road, Chembur, Mumbai", "phone": "+91-22-2522-5678", "status": "OPEN", "capacity": "300 beds", "distance_km": 6.7, "verified_at": "2026-06-20"}
+                    {"name": "Dharavi Relief Shelter A", "address": "Sector 3, Dharavi, Mumbai", "phone": "+91-22-2407-1234", "status": "OPEN", "capacity": "500 beds", "distance_km": 2.5, "verified_at": "2026-06-20", "coordinates": (19.0380, 72.8538)}
                 ]
             },
             "pune": {
                 "coords": (18.5204, 73.8567),
                 "hospitals": [
-                    {"name": "Ruby Hall Clinic", "address": "Alibag Road, Pune", "phone": "+91-20-6645-5100", "status": "OPERATIONAL", "distance_km": 1.5, "verified_at": "2026-06-20"},
-                    {"name": "KEM Hospital Pune", "address": "Rasta Peth, Pune", "phone": "+91-20-6603-7300", "status": "OPERATIONAL", "distance_km": 2.2, "verified_at": "2026-06-20"}
+                    {"name": "Ruby Hall Clinic", "address": "Alibag Road, Pune", "phone": "+91-20-6645-5100", "status": "OPERATIONAL", "distance_km": 1.5, "verified_at": "2026-06-20", "coordinates": (18.5332, 73.8767)},
+                    {"name": "KEM Hospital Pune", "address": "Rasta Peth, Pune", "phone": "+91-20-6603-7300", "status": "OPERATIONAL", "distance_km": 2.2, "verified_at": "2026-06-20", "coordinates": (18.5238, 73.8681)}
                 ],
                 "fire_stations": [
-                    {"name": "Central Fire Station Pune", "address": "Mahatma Phule Peth, Pune", "phone": "+91-20-2645-1700", "status": "OPERATIONAL", "distance_km": 0.8, "verified_at": "2026-06-20"}
+                    {"name": "Central Fire Station Pune", "address": "Mahatma Phule Peth, Pune", "phone": "+91-20-2645-1700", "status": "OPERATIONAL", "distance_km": 0.8, "verified_at": "2026-06-20", "coordinates": (18.5085, 73.8618)}
                 ],
                 "police_stations": [
-                    {"name": "Shivajinagar Police Station", "address": "Shivajinagar, Pune", "phone": "+91-20-2550-1122", "status": "OPERATIONAL", "distance_km": 1.1, "verified_at": "2026-06-20"}
+                    {"name": "Shivajinagar Police Station", "address": "Shivajinagar, Pune", "phone": "+91-20-2550-1122", "status": "OPERATIONAL", "distance_km": 1.1, "verified_at": "2026-06-20", "coordinates": (18.5312, 73.8499)}
                 ],
                 "shelters": [
-                    {"name": "Shivajinagar Relief Camp", "address": "Sports Ground, Shivajinagar, Pune", "phone": "+91-20-2550-3456", "status": "OPEN", "capacity": "400 beds", "distance_km": 1.3, "verified_at": "2026-06-20"}
+                    {"name": "Shivajinagar Relief Camp", "address": "Sports Ground, Shivajinagar, Pune", "phone": "+91-20-2550-3456", "status": "OPEN", "capacity": "400 beds", "distance_km": 1.3, "verified_at": "2026-06-20", "coordinates": (18.5284, 73.8480)}
                 ]
             },
             "delhi": {
                 "coords": (28.6139, 77.2090),
                 "hospitals": [
-                    {"name": "AIIMS New Delhi", "address": "Ansari Nagar, New Delhi", "phone": "+91-11-2658-8500", "status": "OPERATIONAL", "distance_km": 2.5, "verified_at": "2026-06-20"},
-                    {"name": "Ram Manohar Lohia Hospital", "address": "Baba Kharak Singh Marg, New Delhi", "phone": "+91-11-2336-5525", "status": "OPERATIONAL", "distance_km": 1.8, "verified_at": "2026-06-20"}
+                    {"name": "AIIMS New Delhi", "address": "Ansari Nagar, New Delhi", "phone": "+91-11-2658-8500", "status": "OPERATIONAL", "distance_km": 2.5, "verified_at": "2026-06-20", "coordinates": (28.5672, 77.2100)},
+                    {"name": "Ram Manohar Lohia Hospital", "address": "Baba Kharak Singh Marg, New Delhi", "phone": "+91-11-2336-5525", "status": "OPERATIONAL", "distance_km": 1.8, "verified_at": "2026-06-20", "coordinates": (28.6245, 77.2033)}
                 ],
                 "fire_stations": [
-                    {"name": "Connaught Place Fire Station", "address": "Outer Circle, Connaught Place, New Delhi", "phone": "+91-11-2341-2222", "status": "OPERATIONAL", "distance_km": 0.5, "verified_at": "2026-06-20"}
+                    {"name": "Connaught Place Fire Station", "address": "Outer Circle, Connaught Place, New Delhi", "phone": "+91-11-2341-2222", "status": "OPERATIONAL", "distance_km": 0.5, "verified_at": "2026-06-20", "coordinates": (28.6304, 77.2177)}
                 ],
                 "police_stations": [
-                    {"name": "Parliament Street Police Station", "address": "Parliament Street, New Delhi", "phone": "+91-11-2336-1100", "status": "OPERATIONAL", "distance_km": 1.0, "verified_at": "2026-06-20"}
+                    {"name": "Parliament Street Police Station", "address": "Parliament Street, New Delhi", "phone": "+91-11-2336-1100", "status": "OPERATIONAL", "distance_km": 1.0, "verified_at": "2026-06-20", "coordinates": (28.6253, 77.2132)}
                 ],
                 "shelters": [
-                    {"name": "NDMC Community Hall Shelter", "address": "Chanakyapuri, New Delhi", "phone": "+91-11-2411-9988", "status": "OPEN", "capacity": "600 beds", "distance_km": 3.1, "verified_at": "2026-06-20"}
+                    {"name": "NDMC Hall Shelter", "address": "Chanakyapuri, New Delhi", "phone": "+91-11-2411-9988", "status": "OPEN", "capacity": "600 beds", "distance_km": 3.1, "verified_at": "2026-06-20", "coordinates": (28.5900, 77.2000)}
+                ]
+            },
+            "bangalore": {
+                "coords": (12.9716, 77.5946),
+                "hospitals": [
+                    {"name": "Manipal Hospital", "address": "HAL Old Airport Road, Bangalore", "phone": "+91-80-2502-4444", "status": "OPERATIONAL", "distance_km": 1.9, "verified_at": "2026-06-20", "coordinates": (12.9592, 77.6444)},
+                    {"name": "Narayana Health City", "address": "Hosur Road, Bangalore", "phone": "+91-80-7122-2222", "status": "OPERATIONAL", "distance_km": 4.8, "verified_at": "2026-06-20", "coordinates": (12.8055, 77.6946)}
+                ],
+                "fire_stations": [
+                    {"name": "Koramangala Fire Station", "address": "80 Feet Road, Koramangala, Bangalore", "phone": "+91-80-2297-1500", "status": "OPERATIONAL", "distance_km": 2.0, "verified_at": "2026-06-20", "coordinates": (12.9348, 77.6200)}
+                ],
+                "police_stations": [
+                    {"name": "Cubbon Park Police Station", "address": "Kasturba Road, Bangalore", "phone": "+91-80-2294-2583", "status": "OPERATIONAL", "distance_km": 1.2, "verified_at": "2026-06-20", "coordinates": (12.9754, 77.5980)}
+                ],
+                "shelters": [
+                    {"name": "Kanteerava Stadium Relief shelter", "address": "Kasturba Road, Bangalore", "phone": "+91-80-2294-5555", "status": "OPEN", "capacity": "800 beds", "distance_km": 1.5, "verified_at": "2026-06-20", "coordinates": (12.9698, 77.5925)}
                 ]
             }
         }
 
     def parse_location(self, text: str) -> str:
-        """
-        Extracts known cities from query text.
-        Defaults to 'mumbai' if no known city matches.
-        """
+        """Extracts known cities from text."""
         text_lower = text.lower()
         if "pune" in text_lower:
             return "pune"
         if "delhi" in text_lower or "new delhi" in text_lower:
             return "delhi"
-        return "mumbai"  # Default fallback
+        if "bangalore" in text_lower or "bengaluru" in text_lower:
+            return "bangalore"
+        if "mumbai" in text_lower or "bombay" in text_lower:
+            return "mumbai"
+        return "other"
 
     def geocode(self, location_name: str) -> Tuple[float, float]:
-        """Returns mock coordinates for known locations."""
+        """Returns coordinates for a location."""
         key = self.parse_location(location_name)
-        return self.location_db[key]["coords"]
+        if key in self.location_db:
+            return self.location_db[key]["coords"]
+        return (19.0760, 72.8777)  # Mumbai default fallback
 
     def search_resources(self, location_name: str, category: str) -> List[Dict[str, Any]]:
-        """
-        Searches resources matching the emergency category near the geocoded location.
-        """
+        """Searches static database resources matching the category."""
         city = self.parse_location(location_name)
+        if city not in self.location_db:
+            return []
+
         city_data = self.location_db[city]
-        
         cat_lower = category.lower()
         resources = []
         
-        if "medical" in cat_lower or "injured" in cat_lower or "health" in cat_lower or "hospital" in cat_lower:
+        if "medical" in cat_lower or "injured" in cat_lower or "hospital" in cat_lower:
             resources.extend(city_data["hospitals"])
         elif "fire" in cat_lower or "explosion" in cat_lower:
             resources.extend(city_data["fire_stations"])
-            resources.extend(city_data["hospitals"])  # hospital as backup for burns
-        elif "safety" in cat_lower or "crime" in cat_lower or "police" in cat_lower or "rescue" in cat_lower:
+            resources.extend(city_data["hospitals"])
+        elif "safety" in cat_lower or "rescue" in cat_lower or "police" in cat_lower:
             resources.extend(city_data["police_stations"])
             resources.extend(city_data["shelters"])
         else:
-            # General query gets shelters and general contacts
             resources.extend(city_data["shelters"])
             resources.extend(city_data["hospitals"])
             
         return resources
+
+    def verify_resource(self, resource: Dict[str, Any]) -> Dict[str, Any]:
+        """Runs quality scoring on a resource's details."""
+        score = 1.0
+        checks = {}
+        
+        status = resource.get("status", "UNKNOWN").upper()
+        if status in ["OPERATIONAL", "OPEN"]:
+            checks["status_ok"] = True
+        else:
+            checks["status_ok"] = False
+            score -= 0.3
+
+        verified_date_str = resource.get("verified_at", "")
+        try:
+            verified_date = datetime.datetime.strptime(verified_date_str, "%Y-%m-%d")
+            delta_days = (self.current_date - verified_date).days
+            if delta_days <= 2:
+                checks["freshness_ok"] = True
+            elif delta_days <= 7:
+                checks["freshness_ok"] = True
+                score -= 0.1
+            else:
+                checks["freshness_ok"] = False
+                score -= 0.25
+        except ValueError:
+            checks["freshness_ok"] = False
+            score -= 0.3
+
+        phone = resource.get("phone", "")
+        if phone and len(phone) >= 10 and any(char.isdigit() for char in phone):
+            checks["phone_valid"] = True
+        else:
+            checks["phone_valid"] = False
+            score -= 0.2
+
+        if resource.get("name") and resource.get("address"):
+            checks["source_authentic"] = True
+        else:
+            checks["source_authentic"] = False
+            score -= 0.2
+
+        score = max(0.0, round(score, 2))
+        return {
+            "verified": score >= 0.75,
+            "score": score,
+            "checks": checks,
+            "resource_name": resource.get("name", "Unknown Center")
+        }
+
+    def verify_batch(self, resources: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Verifies a batch of resources, inserting score metadata."""
+        verified = []
+        for r in resources:
+            v_report = self.verify_resource(r)
+            res_copied = r.copy()
+            res_copied["verification"] = v_report
+            verified.append(res_copied)
+        return verified

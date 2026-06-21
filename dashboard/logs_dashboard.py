@@ -1,7 +1,7 @@
 import streamlit as st
 import datetime
 from core.observability import Observability
-from utils.translation import TranslationManager
+from utils.language_manager import LanguageManager
 
 class LogsDashboard:
     """
@@ -10,7 +10,7 @@ class LogsDashboard:
     """
     def __init__(self):
         self.observability = Observability()
-        self.trans = TranslationManager()
+        self.trans = LanguageManager()
 
     def render(self, lang_code: str = "en"):
         # Fetch translations
