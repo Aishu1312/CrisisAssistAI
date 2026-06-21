@@ -46,6 +46,14 @@ class MainAgentController:
         self.worker_agent = WorkerAgent(self.client)
         self.evaluator_agent = EvaluatorAgent(self.client)
 
+    def _safe_run_agent(self, agent, message, user_profile):
+        """Safely executes an agent's run method based on its runtime signature."""
+        import inspect
+        sig = inspect.signature(agent.run)
+        if "user_profile" in sig.parameters:
+            return agent.run(message, user_profile)
+        return agent.run(message)
+
     def process_emergency_request(
         self, 
         user_query: str, 
@@ -101,7 +109,7 @@ class MainAgentController:
             },
             trace_id=trace_id
         )
-        plan_msg_out = self.planner_agent.run(plan_msg_in, user_profile)
+        plan_msg_out = self._safe_run_agent(self.planner_agent, plan_msg_in, user_profile)
         category = plan_msg_out.payload.get("category", "General Support")
         plan_steps = plan_msg_out.payload.get("steps", [])
         plan_rationale = plan_msg_out.payload.get("rationale", "")
@@ -135,7 +143,7 @@ class MainAgentController:
             payload=worker_payload_in,
             trace_id=trace_id
         )
-        worker_msg_out = self.worker_agent.run(worker_msg_in, user_profile)
+        worker_msg_out = self._safe_run_agent(self.worker_agent, worker_msg_in, user_profile)
         worker_payload = worker_msg_out.payload
         draft_guidelines = worker_payload.get("guidelines", "")
         verified_resources = worker_payload.get("verified_resources", [])
@@ -159,7 +167,7 @@ class MainAgentController:
             payload=worker_payload,
             trace_id=trace_id
         )
-        eval_msg_out = self.evaluator_agent.run(eval_msg_in, user_profile)
+        eval_msg_out = self._safe_run_agent(self.evaluator_agent, eval_msg_in, user_profile)
         eval_score = eval_msg_out.payload.get("score", 0.0)
         eval_approved = eval_msg_out.payload.get("approved", False)
         eval_feedback = eval_msg_out.payload.get("feedback", "")
@@ -170,14 +178,14 @@ class MainAgentController:
             self.session_memory.add_step("WorkerAgent", "Refining draft based on feedback", "STARTED")
             
             worker_msg_in.payload["steps"].append(f"REFINEMENT: {eval_feedback}")
-            worker_msg_out = self.worker_agent.run(worker_msg_in, user_profile)
+            worker_msg_out = self._safe_run_agent(self.worker_agent, worker_msg_in, user_profile)
             worker_payload = worker_msg_out.payload
             draft_guidelines = worker_payload.get("guidelines", "")
             verified_resources = worker_payload.get("verified_resources", [])
             
             self.session_memory.add_step("EvaluatorAgent", "Second review pass", "STARTED")
             eval_msg_in = AgentMessage(sender="MainController", receiver="EvaluatorAgent", message_type="REQUEST", payload=worker_payload, trace_id=trace_id)
-            eval_msg_out = self.evaluator_agent.run(eval_msg_in, user_profile)
+            eval_msg_out = self._safe_run_agent(self.evaluator_agent, eval_msg_in, user_profile)
             eval_score = eval_msg_out.payload.get("score", 0.0)
             eval_approved = eval_msg_out.payload.get("approved", True)
             eval_feedback = eval_msg_out.payload.get("feedback", "Refinement complete.")
