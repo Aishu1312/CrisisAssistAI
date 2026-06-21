@@ -2,10 +2,10 @@ import json
 import os
 from typing import Dict, Any, List
 
-class UserProfile:
+class UserMemory:
     """
-    Manages long-term user profile data, preferences, emergency contacts, 
-    and medical alerts. Persists to user_profile.json.
+    Manages long-term user profile memory, allergies, medical conditions,
+    emergency contacts, and locations. Persists to user_profile.json.
     """
     def __init__(self, filepath: str = "user_profile.json"):
         self.filepath = filepath
@@ -15,14 +15,14 @@ class UserProfile:
     def load_default_profile(self) -> Dict[str, Any]:
         return {
             "name": "Jane Doe",
-            "preferred_language": "English",
-            "communication_preference": "text",
-            "home_location": "Mumbai, Maharashtra",
-            "medical_alerts": "Type 1 Diabetes, Penicillin Allergy",
+            "allergies": ["Penicillin Allergy"],
+            "medical_conditions": [],
             "emergency_contact": {
                 "name": "John Doe (Spouse)",
                 "phone": "+91-98765-43210"
             },
+            "location": "Pune, Maharashtra",
+            "preferred_language": "English",
             "past_emergency_summaries": []
         }
 
@@ -31,6 +31,15 @@ class UserProfile:
             try:
                 with open(self.filepath, "r", encoding="utf-8") as f:
                     self.profile = json.load(f)
+                    
+                # Ensure backwards-compatibility mapping keys
+                if "home_location" in self.profile and "location" not in self.profile:
+                    self.profile["location"] = self.profile["home_location"]
+                if "medical_alerts" in self.profile and "allergies" not in self.profile:
+                    alerts = self.profile["medical_alerts"]
+                    self.profile["allergies"] = [a.strip() for a in alerts.split(",") if a.strip()]
+                if "medical_conditions" not in self.profile:
+                    self.profile["medical_conditions"] = []
             except Exception as e:
                 print(f"Error loading user profile: {e}")
                 self.profile = self.load_default_profile()
@@ -49,14 +58,18 @@ class UserProfile:
 
     def update_profile(self, updates: Dict[str, Any]):
         for key, val in updates.items():
-            if key in self.profile:
-                if isinstance(self.profile[key], dict) and isinstance(val, dict):
-                    self.profile[key].update(val)
-                else:
-                    self.profile[key] = val
+            self.profile[key] = val
+            
+        # Keep home_location and medical_alerts in sync for UI backward compatibility
+        if "location" in self.profile:
+            self.profile["home_location"] = self.profile["location"]
+        if "allergies" in self.profile:
+            if isinstance(self.profile["allergies"], list):
+                self.profile["medical_alerts"] = ", ".join(self.profile["allergies"])
             else:
-                # Support arbitrary field updates
-                self.profile[key] = val
+                self.profile["medical_alerts"] = str(self.profile["allergies"])
+                # Also convert allergies back to list if it was a string
+                self.profile["allergies"] = [a.strip() for a in str(self.profile["allergies"]).split(",") if a.strip()]
         self.save_to_disk()
 
     def add_past_request(self, query: str, priority: str, category: str, summary: str):

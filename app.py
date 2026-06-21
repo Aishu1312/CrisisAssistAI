@@ -16,7 +16,7 @@ sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 from core.a2a_protocol import AgentMessage
 from core.observability import Observability
 from memory.session_memory import SessionMemory
-from memory.user_profile import UserProfile
+from memory.user_memory import UserMemory
 from tools.translation_tool import TranslationTool
 from tools.voice_tool import VoiceTool
 from tools.maps_tool import MapsTool
@@ -29,374 +29,7 @@ from agents.evaluator import EvaluatorAgent
 from dashboard.logs_dashboard import LogsDashboard
 from utils.language_manager import LanguageManager
 from utils.location_detector import LocationDetector
-
-load_dotenv()
-
-# Set up page configurations
-st.set_page_config(
-    page_title="CrisisAssist AI — Trustworthy Emergency Companion",
-    page_icon="🚨",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Custom Styling (Vanilla CSS) for a premium dark-accented modern look
-st.markdown("""
-<style>
-    .main-title {
-        font-family: 'Outfit', 'Inter', sans-serif;
-        color: #1E3A8A;
-        font-weight: 800;
-        text-align: center;
-        margin-bottom: 0px;
-    }
-    .subtitle {
-        font-family: 'Inter', sans-serif;
-        color: #4B5563;
-        font-size: 1.25rem;
-        text-align: center;
-        margin-bottom: 20px;
-        font-style: italic;
-    }
-    .hero-container {
-        background-color: #F8FAFC;
-        padding: 25px;
-        border-radius: 15px;
-        border: 1px solid #E2E8F0;
-        text-align: center;
-        margin-bottom: 30px;
-        color: #0F172A !important;
-    }
-    .hero-container h1, .hero-container h2, .hero-container h3, .hero-container h4, .hero-container h5, .hero-container h6 {
-        color: #1E3A8A !important;
-    }
-    .hero-container p, .hero-container span, .hero-container div {
-        color: #334155 !important;
-    }
-    .metric-card {
-        background-color: #FFFFFF;
-        padding: 20px;
-        border-radius: 12px;
-        border: 1px solid #E2E8F0;
-        border-top: 5px solid #2563EB;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-        text-align: center;
-    }
-    .metric-value {
-        font-size: 1.8rem;
-        font-weight: bold;
-        color: #1E3A8A;
-        margin-top: 5px;
-    }
-    .metric-label {
-        font-size: 0.9rem;
-        color: #64748B;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-    }
-    .agent-status-container {
-        display: flex;
-        justify-content: space-around;
-        align-items: center;
-        background-color: #F1F5F9;
-        padding: 15px;
-        border-radius: 10px;
-        margin-top: 15px;
-        margin-bottom: 15px;
-    }
-    .agent-node {
-        text-align: center;
-        padding: 10px 15px;
-        border-radius: 8px;
-        font-weight: bold;
-        font-size: 0.95rem;
-        border: 1px solid #CBD5E1;
-        background-color: #FFFFFF;
-        color: #64748B;
-        width: 28%;
-    }
-    .agent-node-active {
-        background-color: #DBEAFE;
-        color: #1E40AF;
-        border: 2px solid #2563EB;
-        box-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
-    }
-    .agent-node-completed {
-        background-color: #D1FAE5;
-        color: #065F46;
-        border: 2px solid #10B981;
-    }
-    .status-badge {
-        font-size: 0.8rem;
-        font-weight: bold;
-        padding: 3px 8px;
-        border-radius: 12px;
-        display: inline-block;
-    }
-    .badge-ok { background-color: #D1FAE5; color: #065F46; }
-    .badge-warn { background-color: #FEF3C7; color: #92400E; }
-    .badge-fail { background-color: #FCE7F3; color: #9D174D; }
-    
-    .timeline-item {
-        padding: 10px;
-        border-left: 3px solid #E2E8F0;
-        margin-left: 10px;
-        margin-bottom: 10px;
-    }
-    .timeline-agent {
-        font-weight: bold;
-        color: #1E3A8A;
-        font-size: 0.9rem;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-
-class MainAgentController:
-    """
-    Controller orchestrating Triage -> Planning -> Worker -> Evaluator agents.
-    Now fully language and location aware.
-    """
-    def __init__(self, gemini_client):
-        self.api_key = os.getenv("GEMINI_API_KEY")
-        self.client = gemini_client
-                
-        # Initialize memory & logging
-        self.session_memory = SessionMemory()
-        self.user_memory = UserProfile()
-        self.observability = Observability()
-        
-        # Initialize tools
-        self.translation_tool = TranslationTool(self.client)
-        self.voice_tool = VoiceTool()
-        
-        # Initialize agents
-        self.planner_agent = PlannerAgent(self.client)
-        self.worker_agent = WorkerAgent(self.client)
-        self.evaluator_agent = EvaluatorAgent(self.client)
-
-    def process_emergency_request(
-        self, 
-        user_query: str, 
-        target_lang_code: str = "en", 
-        location_details: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
-        """
-        Coordinates the emergency response pipeline.
-        """
-        start_time = time.time()
-        trace_id = str(uuid.uuid4())
-        self.session_memory.clear()
-        
-        user_profile = self.user_memory.get_profile()
-        stages_log = []
-        
-        # Parse active location details
-        detected_city = location_details.get("city", "Mumbai") if location_details else "Mumbai"
-        coords = location_details.get("coords", (19.0760, 72.8777)) if location_details else (19.0760, 72.8777)
-        state_country = f"{location_details.get('state', '')}, {location_details.get('country', '')}" if location_details else "Maharashtra, India"
-        
-        # 1. Language Detection & Input Translation
-        self.session_memory.add_step("MainController", "Language Detection", "STARTED")
-        detected_lang = self.translation_tool.detect_language(user_query)
-        self.session_memory.add_user_message(user_query, detected_lang)
-        
-        english_query = user_query
-        if detected_lang != "en":
-            english_query = self.translation_tool.translate(user_query, detected_lang, "en")
-            self.session_memory.add_step(
-                "MainController", 
-                "Translating input", 
-                "COMPLETED", 
-                {"source": user_query, "translated": english_query}
-            )
-            stages_log.append({"stage": "Input Translation", "duration_ms": 100})
-        else:
-            self.session_memory.add_step("MainController", "Input is English", "COMPLETED")
-            
-        # 2. Planning (Priority Triage happens inside PlannerAgent)
-        planning_start = time.time()
-        self.session_memory.add_step("PlannerAgent", "Plan construction & Triage", "STARTED")
-        
-        plan_msg_in = AgentMessage(
-            sender="MainController",
-            receiver="PlannerAgent",
-            message_type="REQUEST",
-            payload={
-                "query": english_query,
-                "language": target_lang_code
-            },
-            trace_id=trace_id
-        )
-        plan_msg_out = self.planner_agent.run(plan_msg_in, user_profile)
-        category = plan_msg_out.payload.get("category", "General Support")
-        plan_steps = plan_msg_out.payload.get("steps", [])
-        plan_rationale = plan_msg_out.payload.get("rationale", "")
-        priority_tier = plan_msg_out.payload.get("priority", "LOW")
-        priority_score = plan_msg_out.payload.get("priority_score", 0.0)
-        triage_reason = plan_msg_out.payload.get("triage_reason", "")
-        
-        self.session_memory.set_emergency_meta(priority_tier, category, triage_reason)
-        
-        planning_duration = int((time.time() - planning_start) * 1000)
-        self.session_memory.add_step(
-            "PlannerAgent", 
-            "Plan construction & Triage", 
-            "COMPLETED", 
-            {"category": category, "steps": plan_steps, "rationale": plan_rationale}
-        )
-        stages_log.append({"stage": "Planning", "duration_ms": planning_duration})
-
-        # 3. Worker Execution
-        worker_start = time.time()
-        self.session_memory.add_step("WorkerAgent", "Execution of plan steps", "STARTED")
-        
-        worker_payload_in = plan_msg_out.payload.copy()
-        worker_payload_in["detected_city"] = detected_city
-        worker_payload_in["coordinates"] = coords
-        
-        worker_msg_in = AgentMessage(
-            sender="MainController",
-            receiver="WorkerAgent",
-            message_type="REQUEST",
-            payload=worker_payload_in,
-            trace_id=trace_id
-        )
-        worker_msg_out = self.worker_agent.run(worker_msg_in, user_profile)
-        worker_payload = worker_msg_out.payload
-        draft_guidelines = worker_payload.get("guidelines", "")
-        verified_resources = worker_payload.get("verified_resources", [])
-        tool_logs = worker_payload.get("tool_execution_log", [])
-        
-        for log in tool_logs:
-            self.session_memory.add_step("WorkerAgent:Tool", log["step"], "COMPLETED", log["result"])
-            
-        worker_duration = int((time.time() - worker_start) * 1000)
-        self.session_memory.add_step("WorkerAgent", "Draft compiled", "COMPLETED")
-        stages_log.append({"stage": "Worker Execution", "duration_ms": worker_duration})
-
-        # 4. Evaluation Loop
-        eval_start = time.time()
-        self.session_memory.add_step("EvaluatorAgent", "Response safety review", "STARTED")
-        
-        eval_msg_in = AgentMessage(
-            sender="MainController",
-            receiver="EvaluatorAgent",
-            message_type="REQUEST",
-            payload=worker_payload,
-            trace_id=trace_id
-        )
-        eval_msg_out = self.evaluator_agent.run(eval_msg_in)
-        eval_score = eval_msg_out.payload.get("score", 0.0)
-        eval_approved = eval_msg_out.payload.get("approved", False)
-        eval_feedback = eval_msg_out.payload.get("feedback", "")
-        
-        # Self-correction check
-        if not eval_approved:
-            self.session_memory.add_step("EvaluatorAgent", "Review FAILED", "REJECTED", {"score": eval_score, "feedback": eval_feedback})
-            self.session_memory.add_step("WorkerAgent", "Refining draft based on feedback", "STARTED")
-            
-            worker_msg_in.payload["steps"].append(f"REFINEMENT: {eval_feedback}")
-            worker_msg_out = self.worker_agent.run(worker_msg_in, user_profile)
-            worker_payload = worker_msg_out.payload
-            draft_guidelines = worker_payload.get("guidelines", "")
-            verified_resources = worker_payload.get("verified_resources", [])
-            
-            self.session_memory.add_step("EvaluatorAgent", "Second review pass", "STARTED")
-            eval_msg_in = AgentMessage(sender="MainController", receiver="EvaluatorAgent", message_type="REQUEST", payload=worker_payload, trace_id=trace_id)
-            eval_msg_out = self.evaluator_agent.run(eval_msg_in)
-            eval_score = eval_msg_out.payload.get("score", 0.0)
-            eval_approved = eval_msg_out.payload.get("approved", True)
-            eval_feedback = eval_msg_out.payload.get("feedback", "Refinement complete.")
-            self.session_memory.add_step("EvaluatorAgent", "Review completed", "APPROVED")
-        else:
-            self.session_memory.add_step("EvaluatorAgent", "Review APPROVED", "COMPLETED", {"score": eval_score, "feedback": eval_feedback})
-            
-        eval_duration = int((time.time() - eval_start) * 1000)
-        stages_log.append({"stage": "Safety Review", "duration_ms": eval_duration})
-
-        self.session_memory.set_verified_resources(verified_resources)
-
-        # 5. Localized Output Construction & TTS
-        translation_start = time.time()
-        final_text = (
-            f"### Immediate Actions:\n{draft_guidelines}\n\n"
-            f"### Checklist:\n{worker_payload.get('summary_checklist', '')}"
-        )
-        
-        # Translate decision explanation context to selected language
-        decision_raw = (
-            f"- User message detected as '{detected_lang.upper()}' language.\n"
-            f"- Emergency priority classified as **{priority_tier}** (Score: {priority_score}).\n"
-            f"- Situation mapped to category: **{category}**.\n"
-            f"- Geocoded coordinates: {coords} ({detected_city.upper()}).\n"
-            f"- Safety Validation Score: **{eval_score * 100}%**."
-        )
-        
-        decision_translated = decision_raw
-        if target_lang_code != "en":
-            try:
-                decision_translated = self.translation_tool.translate(decision_raw, "en", target_lang_code)
-            except Exception as e:
-                print(f"Decision explanation translation failed: {e}")
-            
-        # TTS synthesis with translated prefix
-        self.session_memory.add_step("VoiceTool", "Generating voice file", "STARTED")
-        prefix_en = f"Emergency category {category} resolved. Here is your action checklist:"
-        
-        prefix_translated = prefix_en
-        if target_lang_code != "en":
-            try:
-                prefix_translated = self.translation_tool.translate(prefix_en, "en", target_lang_code)
-            except Exception as e:
-                print(f"TTS prefix translation failed: {e}")
-                
-        tts_text = f"{prefix_translated}\n{worker_payload.get('summary_checklist', '')}"
-        audio_file = self.voice_tool.text_to_speech(tts_text, target_lang_code)
-        
-        if audio_file:
-            self.session_memory.add_step("VoiceTool", "TTS Complete", "COMPLETED", {"path": audio_file})
-        else:
-            self.session_memory.add_step("VoiceTool", "TTS Failed", "ERROR")
-
-        output_duration = int((time.time() - translation_start) * 1000)
-        stages_log.append({"stage": "Output Synthesis", "duration_ms": output_duration})
-
-        # Save context to long-term user memory
-        summary_short = f"Emergency type {category} classified as {priority_tier}. Location: {detected_city}."
-        self.user_memory.add_past_request(user_query, priority_tier, category, summary_short)
-
-        self.session_memory.add_agent_message("CrisisAssistAgent", final_text, target_lang_code, audio_file)
-        
-        total_duration = int((time.time() - start_time) * 1000)
-        
-        # Log telemetry metrics
-        self.observability.log_run(
-            trace_id=trace_id,
-            query=user_query,
-            priority=priority_tier,
-            category=category,
-            duration_ms=total_duration,
-            stages=stages_log,
-            eval_score=eval_score,
-            success=eval_approved
-        )
-
-        return {
-            "trace_id": trace_id,
-            "response": final_text,
-            "priority": priority_tier,
-            "priority_score": priority_score,
-            "category": category,
-            "detected_lang": detected_lang,
-            "detected_city": detected_city,
-            "coordinates": coords,
-            "audio_path": audio_file,
-            "verified_resources": verified_resources,
-            "eval_score": eval_score,
-            "duration_ms": total_duration,
-            "decision_explanation": decision_translated
-        }
+from main_agent import MainAgentController
 
 
 # Initialize singletons
@@ -433,14 +66,21 @@ if geo_data and "coords" in geo_data:
 
 # Initialize Active geolocated info
 if "active_location" not in st.session_state:
-    if st.session_state.browser_coords:
+    profile_loc = controller.user_memory.get_profile().get("location")
+    if profile_loc:
+        st.session_state.active_location = detector.parse_manual_location(profile_loc)
+    elif st.session_state.browser_coords:
         st.session_state.active_location = detector.reverse_geocode(
             st.session_state.browser_coords[0], 
             st.session_state.browser_coords[1]
         )
+        loc_str = f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}"
+        controller.user_memory.update_profile({"location": loc_str})
     else:
         # Priority 3: IP based location
         st.session_state.active_location = detector.detect_from_ip()
+        loc_str = f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}"
+        controller.user_memory.update_profile({"location": loc_str})
 
 # ==================================================
 # SIDEBAR BRANDING & CONFIGURATION
@@ -486,34 +126,73 @@ with st.sidebar:
     user_name = st.text_input(trans.get("name_label", lang_code), value=profile.get("name", "Aisha"))
     
     # Priority 4: Manual location input fallback
-    default_manual_location = profile.get("home_location", f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}")
+    default_manual_location = profile.get("location", f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}")
     home_loc = st.text_input(trans.get("default_loc_label", lang_code), value=default_manual_location)
     
     # If the user changed the location input manually, update our geocoded location status
     if home_loc != default_manual_location:
         st.session_state.active_location = detector.parse_manual_location(home_loc)
-        controller.user_memory.update_profile({"home_location": home_loc})
+        controller.user_memory.update_profile({"location": home_loc})
         st.toast(f"Location updated manually to {home_loc}")
         
-    medical_alerts = st.text_area(trans.get("medical_alerts_label", lang_code), value=profile.get("medical_alerts", "Penicillin Allergy"))
+    # Allergies
+    allergies_list = profile.get("allergies", ["Penicillin Allergy"])
+    if isinstance(allergies_list, list):
+        allergies_str = ", ".join(allergies_list)
+    else:
+        allergies_str = str(allergies_list)
+    medical_alerts = st.text_area(trans.get("medical_alerts_label", lang_code), value=allergies_str)
+    
+    # Medical conditions
+    conditions_list = profile.get("medical_conditions", [])
+    if isinstance(conditions_list, list):
+        conditions_str = ", ".join(conditions_list)
+    else:
+        conditions_str = str(conditions_list)
+        
+    conditions_label = trans.get("medical_conditions_label", lang_code)
+    if conditions_label == "medical_conditions_label":
+        conditions_label = "Medical Conditions"
+    medical_conditions_input = st.text_area(conditions_label, value=conditions_str)
     
     st.markdown(f"**{trans.get('contact_name_label', lang_code)} / Contact:**")
     contact_name = st.text_input(trans.get("contact_name_label", lang_code), value=profile.get("emergency_contact", {}).get("name", "Rahul"))
     contact_phone = st.text_input(trans.get("contact_phone_label", lang_code), value=profile.get("emergency_contact", {}).get("phone", "+91-98765-43210"))
     
-    # Save profile parameters
-    if st.button(trans.get("btn_save_profile", lang_code), use_container_width=True):
+    # Save profile parameters with stacked buttons: Save Profile and Update Profile
+    if st.button("💾 Save Profile", use_container_width=True):
+        parsed_allergies = [a.strip() for a in medical_alerts.split(",") if a.strip()]
+        parsed_conditions = [c.strip() for c in medical_conditions_input.split(",") if c.strip()]
         controller.user_memory.update_profile({
             "name": user_name,
             "preferred_language": selected_lang_name,
-            "home_location": home_loc,
-            "medical_alerts": medical_alerts,
+            "location": home_loc,
+            "allergies": parsed_allergies,
+            "medical_conditions": parsed_conditions,
+            "emergency_contact": {
+                "name": contact_name,
+                "phone": contact_phone
+            }
+        })
+        st.success("✅ Profile saved successfully")
+        
+    if st.button("🔄 Update Profile", use_container_width=True):
+        parsed_allergies = [a.strip() for a in medical_alerts.split(",") if a.strip()]
+        parsed_conditions = [c.strip() for c in medical_conditions_input.split(",") if c.strip()]
+        controller.user_memory.update_profile({
+            "name": user_name,
+            "preferred_language": selected_lang_name,
+            "location": home_loc,
+            "allergies": parsed_allergies,
+            "medical_conditions": parsed_conditions,
             "emergency_contact": {
                 "name": contact_name,
                 "phone": contact_phone
             }
         })
         st.toast("Profile updated in memory!")
+        time.sleep(0.5)
+        st.rerun()
         
     # API Status Check
     api_loaded = controller.api_key is not None
@@ -621,11 +300,59 @@ with tab_console:
                     st.rerun()
 
         # Render Memory status Card
-        st.markdown(f"### 💾 {trans.get('memory_header', lang_code)}")
         profile = controller.user_memory.get_profile()
-        st.markdown(f"**{trans.get('name_label', lang_code)}:** {profile.get('name')}")
-        st.markdown(f"**{trans.get('default_loc_label', lang_code)}:** `{profile.get('home_location')}`")
-        st.markdown(f"**{trans.get('medical_alerts_label', lang_code)}:** `{profile.get('medical_alerts')}`")
+        name = profile.get("name", "Jane Doe")
+        location = profile.get("location") or profile.get("home_location", "Pune, Maharashtra")
+        
+        # Allergies / Medical Alerts
+        allergies_raw = profile.get("allergies", ["None declared"])
+        if isinstance(allergies_raw, list):
+            allergies = ", ".join(allergies_raw) if allergies_raw else "None declared"
+        else:
+            allergies = str(allergies_raw)
+            
+        # Medical Conditions
+        conditions_raw = profile.get("medical_conditions", [])
+        if isinstance(conditions_raw, list):
+            conditions = ", ".join(conditions_raw) if conditions_raw else "None"
+        else:
+            conditions = str(conditions_raw)
+            
+        contact = profile.get("emergency_contact", {})
+        contact_name = contact.get("name", "John Doe")
+        contact_phone = contact.get("phone", "+91-98765-43210")
+        
+        # Retrieve translation strings
+        title_lbl = trans.get("current_user_memory_title", lang_code)
+        if title_lbl == "current_user_memory_title":
+            title_lbl = "Current User Memory"
+            
+        name_lbl = trans.get("name_label", lang_code)
+        loc_lbl = trans.get("default_loc_label", lang_code)
+        alerts_lbl = trans.get("medical_alerts_label", lang_code)
+        
+        conditions_lbl = trans.get("medical_conditions_label", lang_code)
+        if conditions_lbl == "medical_conditions_label":
+            conditions_lbl = "Medical Conditions"
+            
+        memory_card_html = f"""
+        <div style="background-color: #F8FAFC; color: #0F172A; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <h4 style="margin-top: 0; color: #1E3A8A; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 10px;">👤 {title_lbl}</h4>
+            <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; font-size: 0.95rem; margin-top: 10px;">
+                <span style="font-weight: bold; color: #475569;">{name_lbl}:</span>
+                <span style="color: #0F172A;">{name}</span>
+                <span style="font-weight: bold; color: #475569;">{loc_lbl}:</span>
+                <span style="color: #0F172A;">{location}</span>
+                <span style="font-weight: bold; color: #475569;">{alerts_lbl}:</span>
+                <span style="color: #DC2626; font-weight: bold;">{allergies}</span>
+                <span style="font-weight: bold; color: #475569;">{conditions_lbl}:</span>
+                <span style="color: #0F172A;">{conditions}</span>
+                <span style="font-weight: bold; color: #475569;">Emergency Contact:</span>
+                <span style="color: #0F172A;">{contact_name} ({contact_phone})</span>
+            </div>
+        </div>
+        """
+        st.markdown(memory_card_html, unsafe_allow_html=True)
         
         past_queries = profile.get("past_emergency_summaries", [])
         if past_queries:

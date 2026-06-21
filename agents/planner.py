@@ -2,6 +2,7 @@ import re
 import json
 from google import genai
 from core.a2a_protocol import AgentMessage
+from core.context_engineering import ContextEngineering
 
 class PlannerAgent:
     """
@@ -69,15 +70,7 @@ class PlannerAgent:
         # Triage LLM check
         if self.client:
             try:
-                system_instruction = (
-                    "You are an expert Emergency Priority Triage Agent. "
-                    "Classify user input queries into one of four categories: LOW, MEDIUM, HIGH, or CRITICAL.\n"
-                    "- LOW: General inquiries, advice, packing guides (non-urgent).\n"
-                    "- MEDIUM: Urgent but not life-threatening (e.g. looking for clinics, open shops, power cuts).\n"
-                    "- HIGH: Impending danger, safety hazards (e.g. fire nearby, minor injury, storm approaching).\n"
-                    "- CRITICAL: Active life-or-death crisis (e.g. trapped, severe bleeding, actively burning house).\n"
-                    "Return a JSON format response containing priority_tier, priority_score (0.0 to 1.0), and reasoning. "
-                )
+                system_instruction = ContextEngineering.build_system_instruction("priority", user_profile, lang_name)
                 prompt = (
                     "Analyze this query and classify it. Output ONLY a valid JSON string "
                     "with keys: 'priority_tier', 'priority_score', and 'reasoning'.\n\n"
@@ -121,13 +114,7 @@ class PlannerAgent:
 
         if self.client:
             try:
-                system_instruction = (
-                    "You are the Crisis Planner Agent. "
-                    f"Analyze the request, identify the category (Medical, Fire, Natural Disaster, Search & Rescue, General Support), "
-                    f"and draft a precise action plan (list of steps) for the worker agent to execute. "
-                    f"IMPORTANT: You must write the rationale and all steps in the plan completely in {lang_name}. Do not output in English. "
-                    f"Return your plan as a structured JSON object with keys: category, rationale, and steps (list of strings)."
-                )
+                system_instruction = ContextEngineering.build_system_instruction("planner", user_profile, lang_name)
                 prompt = (
                     "Create an emergency plan. Output ONLY a valid JSON string "
                     "with keys: 'category', 'rationale', and 'steps'.\n\n"

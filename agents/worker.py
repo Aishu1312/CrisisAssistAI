@@ -2,6 +2,7 @@ import json
 import re
 from google import genai
 from core.a2a_protocol import AgentMessage
+from core.context_engineering import ContextEngineering
 from tools.location_tool import LocationTool
 from tools.translation_tool import TranslationTool
 from mcp_server.server import ModelContextProtocolServer
@@ -182,18 +183,16 @@ class WorkerAgent:
 
         if self.client:
             try:
-                system_instruction = (
-                    "You are the Emergency Worker Agent. "
-                    "Your role is to compile actionable, life-saving guidelines and rescue instructions. "
-                    f"IMPORTANT: You must write all guidelines and checklists completely in {lang_name}. Do not output in English.\n"
-                    "Format emergency guidelines as clear, numbered lists. "
-                    "Incorporate the user profile and medical context if relevant to customize the advice."
+                system_instruction = ContextEngineering.build_system_instruction(
+                    "worker", 
+                    user_profile, 
+                    lang_name, 
+                    {"location": detected_city}
                 )
                 prompt = (
                     f"Create emergency safety guidelines for a {category} emergency.\n"
                     f"User Situation: '{query}'\n\n"
-                    f"{profile_context}\n\n"
-                    f"Make the response action-oriented, tailored to the user profile if applicable, and written entirely in {lang_name}."
+                    f"Make the response action-oriented and written entirely in {lang_name}."
                 )
                 response = self.client.models.generate_content(
                     model="gemini-2.5-flash",
