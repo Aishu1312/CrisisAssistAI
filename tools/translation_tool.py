@@ -2,6 +2,7 @@ import re
 from typing import Dict
 from google import genai
 import os
+from utils.gemini_helper import safe_generate_content
 
 class TranslationTool:
     """
@@ -37,8 +38,9 @@ class TranslationTool:
                     "two-letter ISO language code (e.g. en, hi, mr, es, fr, zh, ar) in lowercase. Do not write anything else.\n\n"
                     f"Text: '{text}'"
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt,
                 )
                 detected = response.text.strip().lower()
@@ -70,8 +72,9 @@ class TranslationTool:
                     "Do not write any intro, explanations, or meta-comments. Just output the translation.\n\n"
                     f"Text:\n{text}"
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt,
                 )
                 translated = response.text.strip()

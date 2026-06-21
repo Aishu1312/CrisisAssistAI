@@ -6,6 +6,7 @@ from core.context_engineering import ContextEngineering
 from tools.location_tool import LocationTool
 from tools.translation_tool import TranslationTool
 from mcp_server.server import ModelContextProtocolServer
+from utils.gemini_helper import safe_generate_content
 
 class WorkerAgent:
     """
@@ -56,8 +57,9 @@ class WorkerAgent:
                     f"- 'coordinates': a list of [latitude, longitude] representing its location\n"
                     f"Output ONLY a valid JSON array of objects. Do not include markdown formatting or tags."
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt
                 )
                 text = response.text.strip()
@@ -192,10 +194,11 @@ class WorkerAgent:
                 prompt = (
                     f"Create emergency safety guidelines for a {category} emergency.\n"
                     f"User Situation: '{query}'\n\n"
-                    f"Make the response action-oriented and written entirely in {lang_name}."
+                    f"CRITICAL: You must write the entire guidelines completely in the {lang_name} language. Do not output in English. Make the response action-oriented."
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt,
                     config={"system_instruction": system_instruction}
                 )
@@ -214,11 +217,12 @@ class WorkerAgent:
                 prompt = (
                     f"Summarize the following emergency guidelines into a checklist of "
                     f"exactly 3 to 5 clear, actionable, short steps. Use Markdown bullet points (-).\n"
-                    f"IMPORTANT: You must write the checklist completely in {lang_name}.\n\n"
+                    f"CRITICAL: You must write the checklist completely in the {lang_name} language. Do not output in English.\n\n"
                     f"Guidelines:\n{selected_guide}"
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt
                 )
                 summary_checklist = response.text.strip()

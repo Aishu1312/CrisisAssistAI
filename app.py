@@ -174,25 +174,25 @@ with st.sidebar:
                 "phone": raw_contact_phone
             }
         })
-        st.toast("Profile updated in memory!")
+        st.toast(trans.get("status_completed", lang_code))
 
     user_name = st.text_input(
         trans.get("name_label", lang_code), 
-        placeholder="E.g., Aishwarya", 
+        placeholder=trans.get("placeholder_name", lang_code), 
         key="profile_name", 
         on_change=on_profile_change
     )
     
     home_loc = st.text_input(
         trans.get("default_loc_label", lang_code), 
-        placeholder="E.g., Pune, Maharashtra", 
+        placeholder=trans.get("placeholder_location", lang_code), 
         key="profile_location", 
         on_change=on_profile_change
     )
     
     medical_alerts = st.text_area(
         trans.get("medical_alerts_label", lang_code), 
-        placeholder="E.g., Asthma", 
+        placeholder=trans.get("placeholder_allergies", lang_code), 
         key="profile_allergies", 
         on_change=on_profile_change
     )
@@ -202,7 +202,7 @@ with st.sidebar:
         conditions_label = "Medical Conditions"
     medical_conditions_input = st.text_area(
         conditions_label, 
-        placeholder="E.g., Diabetes", 
+        placeholder=trans.get("placeholder_conditions", lang_code), 
         key="profile_conditions", 
         on_change=on_profile_change
     )
@@ -210,25 +210,28 @@ with st.sidebar:
     st.markdown(f"**{trans.get('contact_name_label', lang_code)} / Contact:**")
     contact_name = st.text_input(
         trans.get("contact_name_label", lang_code), 
-        placeholder="E.g., Rahul", 
+        placeholder=trans.get("placeholder_contact_name", lang_code), 
         key="profile_contact_name", 
         on_change=on_profile_change
     )
     contact_phone = st.text_input(
         trans.get("contact_phone_label", lang_code), 
-        placeholder="E.g., 9999999999", 
+        placeholder=trans.get("placeholder_contact_phone", lang_code), 
         key="profile_contact_phone", 
         on_change=on_profile_change
     )
     
     # Save profile parameters with stacked buttons: Save Profile and Update Profile
-    if st.button("💾 Save Profile", use_container_width=True):
+    btn_save_lbl = "💾 " + trans.get("btn_save_profile", lang_code)
+    btn_update_lbl = trans.get("btn_update_profile", lang_code)
+    
+    if st.button(btn_save_lbl, use_container_width=True):
         on_profile_change()
-        st.success("✅ Profile saved successfully")
+        st.success("✅ " + trans.get("status_completed", lang_code))
         
-    if st.button("🔄 Update Profile", use_container_width=True):
+    if st.button(btn_update_lbl, use_container_width=True):
         on_profile_change()
-        st.toast("Profile updated in memory!")
+        st.toast(trans.get("status_completed", lang_code))
         time.sleep(0.5)
         st.rerun()
         
@@ -251,9 +254,13 @@ st.markdown(f"<h1 class='main-title'>🚨 {trans.get('title', lang_code)}</h1>",
 st.markdown(f"<p class='subtitle'>{trans.get('tagline', lang_code)}</p>", unsafe_allow_html=True)
 
 # Landing Hero Container
+hero_title_text = trans.get("hero_title", lang_code)
+loc_status_text = trans.get("status_current_location", lang_code)
+lang_status_text = trans.get("status_selected_language", lang_code)
+
 st.markdown(f"""
 <div class='hero-container'>
-    <h3>🌟 Trustworthy Emergency Companion</h3>
+    <h3>{hero_title_text}</h3>
     <p>{trans.get('hero_desc', lang_code)}</p>
 </div>
 """, unsafe_allow_html=True)
@@ -264,8 +271,8 @@ st.markdown(f"""
 location_str = f"{st.session_state.active_location['city']}, {st.session_state.active_location['state']}"
 status_html = f"""
 <div style='background-color: #EEF2F6; color: #1F2937; padding: 12px 20px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-around; font-weight: bold; border: 1px solid #D1D5DB;'>
-    <span>📍 Current Location: <code style='color: #1E3A8A; font-size: 1rem;'>{location_str}</code></span>
-    <span>🌐 Selected Language: <code style='color: #1E3A8A; font-size: 1rem;'>{selected_lang_name}</code></span>
+    <span>{loc_status_text} <code style='color: #1E3A8A; font-size: 1rem;'>{location_str}</code></span>
+    <span>{lang_status_text} <code style='color: #1E3A8A; font-size: 1rem;'>{selected_lang_name}</code></span>
 </div>
 """
 st.markdown(status_html, unsafe_allow_html=True)
@@ -380,7 +387,7 @@ with tab_console:
                 <span style="color: #DC2626; font-weight: bold;">{allergies}</span>
                 <span style="font-weight: bold; color: #475569;">{conditions_lbl}:</span>
                 <span style="color: #0F172A;">{conditions}</span>
-                <span style="font-weight: bold; color: #475569;">Emergency Contact:</span>
+                <span style="font-weight: bold; color: #475569;">{trans.get("emergency_contact_label", lang_code)}:</span>
                 <span style="color: #0F172A;">{contact_display}</span>
             </div>
         </div>
@@ -501,7 +508,7 @@ with tab_console:
                     v_score = int(v.get("score", 0.0) * 100)
                     r_coords = r.get("coordinates", current_coords)
                     
-                    status_badge = "badge-ok" if r['status'] in ["OPERATIONAL", "OPEN", "AVAILABLE", "सत्यापित", "चालू", "सक्रिय"] else "badge-fail"
+                    status_badge = "badge-ok" if v.get("checks", {}).get("status_ok", True) else "badge-fail"
                     fresh_badge = "badge-ok" if v.get("checks", {}).get("freshness_ok", True) else "badge-warn"
                     phone_badge = "badge-ok" if v.get("checks", {}).get("phone_valid", True) else "badge-fail"
                     
@@ -514,6 +521,13 @@ with tab_console:
                     
                     # Labels translated dynamically for card
                     addr_label = trans.get("default_loc_label", lang_code)
+                    fresh_badge_text = trans.get("status_badge_fresh", lang_code)
+                    verified_badge_text = trans.get("status_badge_verified", lang_code)
+                    lbl_status_text = trans.get("lbl_status", lang_code)
+                    lbl_freshness_text = trans.get("lbl_freshness", lang_code)
+                    lbl_contact_format_text = trans.get("lbl_contact_format", lang_code)
+                    view_directions_text = trans.get("view_directions", lang_code)
+                    lbl_contact_text = trans.get("emergency_contact_label", lang_code).replace("Emergency ", "").strip()
                     
                     st.markdown(f"""
                     <div style='background-color: #F8FAFC; color: #0F172A; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #10B981; border: 1px solid #E2E8F0;'>
@@ -523,14 +537,14 @@ with tab_console:
                         <span style='color: #0F172A; font-weight: bold; background-color: #E2E8F0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; margin-left: 8px;'>Score: {v_score}%</span><br>
                         <span style='color: #334155; display: block; margin-top: 5px;'>{addr_label}: {r['address']}</span>
                         <div style="margin-top: 5px; font-size: 0.95rem;">
-                            <span style='color: #475569; font-weight: 500;'>Contact:</span> 
+                            <span style='color: #475569; font-weight: 500;'>{lbl_contact_text}:</span> 
                             <a href="tel:{phone_clean}" style="color: #2563EB; font-weight: bold; text-decoration: underline;">{r['phone']}</a>
-                            | <a href="{directions_url}" target="_blank" style="color: #059669; font-weight: bold; text-decoration: underline;">📍 View Directions on Map</a>
+                            | <a href="{directions_url}" target="_blank" style="color: #059669; font-weight: bold; text-decoration: underline;">{view_directions_text}</a>
                         </div>
                         <div style="margin-top: 8px;">
-                            <span style='color: #475569; font-weight: 500;'>Status:</span> <span class='status-badge {status_badge}'>{r['status']}</span> | 
-                            <span style='color: #475569; font-weight: 500;'>Freshness:</span> <span class='status-badge {fresh_badge}'>FRESH</span> | 
-                            <span style='color: #475569; font-weight: 500;'>Contact Format:</span> <span class='status-badge {phone_badge}'>VERIFIED</span>
+                            <span style='color: #475569; font-weight: 500;'>{lbl_status_text}:</span> <span class='status-badge {status_badge}'>{r['status']}</span> | 
+                            <span style='color: #475569; font-weight: 500;'>{lbl_freshness_text}:</span> <span class='status-badge {fresh_badge}'>{fresh_badge_text}</span> | 
+                            <span style='color: #475569; font-weight: 500;'>{lbl_contact_format_text}:</span> <span class='status-badge {phone_badge}'>{verified_badge_text}</span>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
@@ -555,7 +569,8 @@ with tab_console:
                 details = step.get("details", "")
                 
                 status_color = "#1E40AF" if status == "STARTED" else ("#047857" if status in ["COMPLETED", "APPROVED"] else "#B91C1C")
-                details_lbl = f" | Details: <code>{details}</code>" if details else ""
+                details_header = trans.get("lbl_details", lang_code)
+                details_lbl = f" | {details_header} <code>{details}</code>" if details else ""
                 st.markdown(f"""
                 <div class='timeline-item'>
                     <span class='timeline-agent'>[{agent}]</span> 

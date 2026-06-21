@@ -3,6 +3,7 @@ import json
 import re
 from typing import Dict, Any, Tuple
 import streamlit as st
+from utils.gemini_helper import safe_generate_content
 
 class LocationDetector:
     """
@@ -62,8 +63,9 @@ class LocationDetector:
                     "Return ONLY a valid JSON object with keys: 'city', 'state', 'country'. "
                     "Do not include markdown tags, code blocks, or explanations."
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt
                 )
                 text = response.text.strip()
@@ -111,8 +113,9 @@ class LocationDetector:
                     "Return ONLY a valid JSON object with keys: 'city', 'state', 'country', 'latitude', 'longitude'. "
                     "Do not include markdown tags, code blocks, or explanations."
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt
                 )
                 text = response.text.strip()
@@ -122,9 +125,9 @@ class LocationDetector:
                 
                 data = json.loads(text)
                 return {
-                    "city": data.get("city", city),
-                    "state": data.get("state", state),
-                    "country": data.get("country", country),
+                    "city": city,
+                    "state": state,
+                    "country": country,
                     "coords": (float(data.get("latitude", 19.0760)), float(data.get("longitude", 72.8777)))
                 }
             except Exception as e:

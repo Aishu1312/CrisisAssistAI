@@ -3,6 +3,7 @@ import json
 from google import genai
 from core.a2a_protocol import AgentMessage
 from core.context_engineering import ContextEngineering
+from utils.gemini_helper import safe_generate_content
 
 class PlannerAgent:
     """
@@ -76,8 +77,9 @@ class PlannerAgent:
                     "with keys: 'priority_tier', 'priority_score', and 'reasoning'.\n\n"
                     f"User Query: '{query}'"
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt,
                     config={"system_instruction": system_instruction}
                 )
@@ -117,12 +119,17 @@ class PlannerAgent:
                 system_instruction = ContextEngineering.build_system_instruction("planner", user_profile, lang_name)
                 prompt = (
                     "Create an emergency plan. Output ONLY a valid JSON string "
-                    "with keys: 'category', 'rationale', and 'steps'.\n\n"
+                    "with keys: 'category', 'rationale', and 'steps'.\n"
+                    "CRITICAL REQUIREMENTS:\n"
+                    "1. The JSON keys ('category', 'rationale', 'steps') must be in English.\n"
+                    "2. The value of 'category' must be in English and must be exactly one of: 'Medical', 'Fire', 'Natural Disaster', 'Search & Rescue', or 'General Support'. Do not translate this value.\n"
+                    f"3. The values of 'rationale' and 'steps' must be written entirely in the {lang_name} language. Do not output in English.\n\n"
                     f"User Query: '{query}'\n"
                     f"Classified Priority: {priority_tier}"
                 )
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt,
                     config={"system_instruction": system_instruction}
                 )

@@ -3,6 +3,7 @@ import json
 from google import genai
 from core.a2a_protocol import AgentMessage
 from core.context_engineering import ContextEngineering
+from utils.gemini_helper import safe_generate_content
 
 class EvaluatorAgent:
     """
@@ -58,13 +59,15 @@ class EvaluatorAgent:
                 system_instruction = ContextEngineering.build_system_instruction("evaluator", user_profile or {}, lang_name)
                 prompt = (
                     "Evaluate this emergency draft. Output ONLY a valid JSON string "
-                    "with keys: 'score', 'approved', and 'feedback'.\n\n"
+                    "with keys: 'score', 'approved', and 'feedback'.\n"
+                    f"CRITICAL: The value of 'feedback' must be written completely in the {lang_name} language. Do not output in English.\n\n"
                     f"Draft Guidelines ({lang_name}):\n{guidelines}\n\n"
                     f"Number of Resources: {len(resources)}"
                 )
                 
-                response = self.client.models.generate_content(
-                    model="gemini-2.5-flash",
+                response = safe_generate_content(
+                    self.client,
+                    model="gemini-flash-latest",
                     contents=prompt,
                     config={"system_instruction": system_instruction}
                 )

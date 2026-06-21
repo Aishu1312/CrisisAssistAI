@@ -11,6 +11,7 @@ from memory.session_memory import SessionMemory
 from memory.user_memory import UserMemory
 from tools.translation_tool import TranslationTool
 from tools.voice_tool import VoiceTool
+from utils.language_manager import LanguageManager
 
 from agents.planner import PlannerAgent
 from agents.worker import WorkerAgent
@@ -200,9 +201,14 @@ class MainAgentController:
 
         # 5. Localized Output Construction & TTS
         translation_start = time.time()
+        
+        lang_mgr = LanguageManager()
+        actions_hdr = lang_mgr.get("immediate_actions_header", target_lang_code)
+        checklist_hdr = lang_mgr.get("checklist_header", target_lang_code)
+        
         final_text = (
-            f"### Immediate Actions:\n{draft_guidelines}\n\n"
-            f"### Checklist:\n{worker_payload.get('summary_checklist', '')}"
+            f"### {actions_hdr}:\n{draft_guidelines}\n\n"
+            f"### {checklist_hdr}:\n{worker_payload.get('summary_checklist', '')}"
         )
         
         decision_raw = (
