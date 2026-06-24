@@ -42,7 +42,21 @@ from main_agent import MainAgentController
 
 # Initialize singletons
 trans = LanguageManager()
-api_key = os.getenv("GEMINI_API_KEY")
+
+# Sync API keys to support both google-genai and older SDK expectations
+gemini_key = os.getenv("GEMINI_API_KEY")
+google_key = os.getenv("GOOGLE_API_KEY")
+if google_key == "<paste_your_key_here>":
+    google_key = None
+
+if gemini_key and not google_key:
+    os.environ["GOOGLE_API_KEY"] = gemini_key
+    google_key = gemini_key
+elif google_key and not gemini_key:
+    os.environ["GEMINI_API_KEY"] = google_key
+    gemini_key = google_key
+
+api_key = gemini_key
 gemini_client = None
 if api_key:
     try:
