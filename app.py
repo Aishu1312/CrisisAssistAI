@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 # Configure Streamlit page layout to wide mode first
 st.set_page_config(
@@ -8,7 +9,16 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-import os
+# Copy Streamlit secrets to environment variables so that standard SDKs (google-genai, google-adk, etc.) can read them
+try:
+    for key in st.secrets.keys():
+        os.environ[key] = str(st.secrets[key])
+except Exception:
+    # Fallback to checking specific common keys if iteration is unsupported
+    for key in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_MODEL"]:
+        if key in st.secrets:
+            os.environ[key] = str(st.secrets[key])
+
 import sys
 import time
 import re
