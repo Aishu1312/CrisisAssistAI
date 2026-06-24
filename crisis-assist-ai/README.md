@@ -77,6 +77,18 @@ graph TD
 3. **`Windows Web Hot-Reload Conflicts`**: If code updates are not reflected in the playground on Windows, run the port cleanup command to force restart:
    `Get-Process -Id (Get-NetTCPConnection -LocalPort 18081, 8090 -ErrorAction SilentlyContinue).OwningProcess | Stop-Process -Force`
 
+## Assets
+
+### Cover Page Banner
+![Cover Page Banner](assets/cover_page_banner.png)
+
+### Agent Workflow Architecture
+![Architecture Diagram](assets/architecture_diagram.png)
+
+## Demo Script
+
+The timed presentation/demo script for CrisisAssist AI is available in [DEMO_SCRIPT.txt](DEMO_SCRIPT.txt).
+
 ## Push to GitHub
 
 1. Create a new repo at https://github.com/new
