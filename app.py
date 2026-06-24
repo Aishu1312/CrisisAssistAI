@@ -32,6 +32,14 @@ from utils.location_detector import LocationDetector
 from main_agent import MainAgentController
 
 
+# Configure Streamlit page layout to wide mode first
+st.set_page_config(
+    page_title="CrisisAssist AI",
+    page_icon="🚨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 # Initialize singletons
 trans = LanguageManager()
 api_key = os.getenv("GEMINI_API_KEY")
@@ -250,6 +258,176 @@ with st.sidebar:
 # ==================================================
 # MAIN PAGE BRANDING HERO
 # ==================================================
+# Helper to translate UI labels dynamically to any of the 28 languages (uses TranslationTool and caches results)
+def get_translated_label(label_text, target_lang):
+    if target_lang == "en":
+        return label_text
+    cache_key = f"trans_lbl_{label_text}_{target_lang}"
+    if cache_key not in st.session_state:
+        if "controller" in st.session_state and hasattr(st.session_state.controller, "translation_tool"):
+            try:
+                translated = st.session_state.controller.translation_tool.translate(label_text, "en", target_lang)
+                st.session_state[cache_key] = translated
+            except Exception:
+                st.session_state[cache_key] = label_text
+        else:
+            st.session_state[cache_key] = label_text
+    return st.session_state[cache_key]
+
+# Custom styling injection for responsive layout, dark theme compatibility, and premium dashboard widgets
+st.markdown("""
+<style>
+/* Custom font family */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+html, body, [class*="css"], .stApp {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* Adjust main container padding to look professional */
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* Typography styles */
+.main-title {
+    font-weight: 800;
+    font-size: 2.5rem !important;
+    margin-bottom: 0.2rem !important;
+    color: var(--primary-color, #1E3A8A);
+}
+.subtitle {
+    font-weight: 400;
+    font-size: 1.15rem !important;
+    color: #64748B;
+    margin-bottom: 1.5rem !important;
+}
+
+/* Hero container with glassmorphism or sleek gradient styling */
+.hero-container {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+    border-radius: 12px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    margin-bottom: 25px;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+.hero-container h3 {
+    color: #FFFFFF !important;
+    margin-top: 0 !important;
+    font-weight: 600;
+    font-size: 1.4rem;
+}
+.hero-container p {
+    color: #E2E8F0 !important;
+    font-size: 1rem;
+    margin-bottom: 0;
+    line-height: 1.6;
+}
+
+/* Status Bar details */
+.status-bar {
+    background-color: var(--secondary-background-color, #EEF2F6);
+    color: var(--text-color, #1F2937);
+    padding: 12px 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    font-weight: 600;
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    font-size: 0.95rem;
+}
+.status-bar code {
+    background-color: rgba(37, 99, 235, 0.1);
+    color: #2563EB !important;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.95rem;
+    font-family: monospace;
+    margin-left: 5px;
+}
+
+/* Dashboard Metric Telemetry Cards */
+.telemetry-card {
+    background-color: var(--secondary-background-color, #FFFFFF);
+    border: 1px solid rgba(128, 128, 128, 0.2);
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    margin-bottom: 15px;
+    min-height: 110px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.telemetry-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 12px -2px rgba(0,0,0,0.1);
+}
+.telemetry-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748B;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+}
+.telemetry-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--text-color, #0F172A);
+}
+
+/* Badge styling */
+.status-badge {
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: bold;
+    display: inline-block;
+}
+.badge-ok {
+    background-color: rgba(16, 185, 129, 0.15);
+    color: #10B981 !important;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.badge-fail {
+    background-color: rgba(239, 68, 68, 0.15);
+    color: #EF4444 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+.badge-warn {
+    background-color: rgba(245, 158, 11, 0.15);
+    color: #F59E0B !important;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Execution Timeline styling */
+.timeline-item {
+    background-color: var(--secondary-background-color, #F8FAFC);
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border-left: 4px solid #3B82F6;
+    border-top: 1px solid rgba(128, 128, 128, 0.15);
+    border-right: 1px solid rgba(128, 128, 128, 0.15);
+    border-bottom: 1px solid rgba(128, 128, 128, 0.15);
+    font-size: 0.95rem;
+}
+.timeline-agent {
+    font-weight: bold;
+    color: #3B82F6;
+    margin-right: 5px;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown(f"<h1 class='main-title'>🚨 {trans.get('title', lang_code)}</h1>", unsafe_allow_html=True)
 st.markdown(f"<p class='subtitle'>{trans.get('tagline', lang_code)}</p>", unsafe_allow_html=True)
 
@@ -384,9 +562,7 @@ with tab_console:
             emergency_contact = phone_val
 
         # Retrieve translation strings
-        title_lbl = trans.get("current_user_memory_title", lang_code)
-        if title_lbl == "current_user_memory_title":
-            title_lbl = "Current User Memory"
+        title_lbl = get_translated_label("Current User Memory", lang_code)
             
         name_lbl = trans.get("name_label", lang_code)
         alerts_lbl = trans.get("medical_alerts_label", lang_code)
@@ -407,44 +583,44 @@ with tab_console:
         if name:
             memory_lines.append(f"""
                 <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{name_lbl}</div>
-                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{name}</div>
+                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{name_lbl}</div>
+                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{name}</div>
                 </div>
             """)
         if location:
             memory_lines.append(f"""
                 <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{default_loc_lbl}</div>
-                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{location}</div>
+                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{default_loc_lbl}</div>
+                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{location}</div>
                 </div>
             """)
         if allergies:
             memory_lines.append(f"""
                 <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{alerts_lbl}</div>
-                    <div style="color: #DC2626; font-weight: bold; font-size: 1rem; margin-top: 2px; word-break: break-word;">{allergies}</div>
+                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{alerts_lbl}</div>
+                    <div style="color: #EF4444; font-weight: bold; font-size: 1rem; margin-top: 2px; word-break: break-word;">{allergies}</div>
                 </div>
             """)
         if conditions:
             memory_lines.append(f"""
                 <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{conditions_lbl}</div>
-                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{conditions}</div>
+                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{conditions_lbl}</div>
+                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{conditions}</div>
                 </div>
             """)
         if emergency_contact:
             memory_lines.append(f"""
                 <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{emergency_contact_lbl}</div>
-                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{emergency_contact}</div>
+                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{emergency_contact_lbl}</div>
+                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{emergency_contact}</div>
                 </div>
             """)
             
         memory_card_html = f"""
-        <div style="background-color: #F8FAFC; color: #0F172A; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-            <h4 style="margin-top: 0; color: #1E3A8A; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 10px;">👤 {title_lbl}</h4>
-            <div style="font-size: 0.95rem; margin-top: 10px; line-height: 1.6;">
-                {"".join(memory_lines) if memory_lines else '<div style="color: #64748B; font-style: italic;">No profile data saved in memory.</div>'}
+        <div style="background-color: var(--secondary-background-color, rgba(128,128,128,0.05)); color: var(--text-color, #0F172A); padding: 18px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
+            <h4 style="margin-top: 0; color: var(--primary-color, #2563EB); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; border-bottom: 1px solid rgba(128, 128, 128, 0.2); padding-bottom: 8px; margin-bottom: 12px;">👤 {title_lbl}</h4>
+            <div style="font-size: 0.95rem; line-height: 1.6;">
+                {"".join(memory_lines) if memory_lines else f'<div style="color: #64748B; font-style: italic;">{get_translated_label("No profile data saved in memory.", lang_code)}</div>'}
             </div>
         </div>
         """
@@ -469,7 +645,9 @@ with tab_console:
         detected_p = controller.session_memory.current_priority
         if detected_p and detected_p != "UNKNOWN":
             p_color = "#DC2626" if detected_p in ["CRITICAL", "HIGH"] else "#D97706"
-            st.markdown(f"**{trans.get('priority_label', lang_code)}:** <span style='color:{p_color}; font-weight:bold; font-size:1.15rem;'>{detected_p}</span>", unsafe_allow_html=True)
+            priority_lbl = trans.get("priority_label", lang_code)
+            priority_val_trans = get_translated_label(detected_p, lang_code)
+            st.markdown(f"**{priority_lbl}:** <span style='color:{p_color}; font-weight:bold; font-size:1.15rem;'>{priority_val_trans}</span>", unsafe_allow_html=True)
             
         active_state = controller.session_memory.active_agent
         
@@ -485,43 +663,82 @@ with tab_console:
         else:
             planner_state, worker_state, evaluator_state = "pending", "pending", "pending"
             
-        def get_agent_card_html(title, status_label, icon, state):
+        # Agent execution info helper
+        timeline = controller.session_memory.get_timeline()
+        def get_agent_execution_info(agent_id, default_desc_key):
+            default_desc = get_translated_label(default_desc_key, lang_code)
+            for step in reversed(timeline):
+                if step.get("agent") == agent_id:
+                    action = step.get("action", "")
+                    details = step.get("details", "")
+                    # Localize step actions/details if not in target language
+                    action_trans = get_translated_label(action, lang_code)
+                    details_trans = get_translated_label(str(details), lang_code) if details else ""
+                    return f"{action_trans}: {details_trans}" if details_trans else action_trans
+            return default_desc
+
+        planner_info = get_agent_execution_info("PlannerAgent", "Plan construction & Triage")
+        worker_info = get_agent_execution_info("WorkerAgent", "Execution of plan steps")
+        evaluator_info = get_agent_execution_info("EvaluatorAgent", "Response safety review")
+
+        def get_agent_card_html(title, status_label, icon, state, exec_info):
+            # Localize status label
+            status_lbl_translated = get_translated_label(status_label, lang_code)
+            
             if state == 'active':
-                bg = "#EFF6FF"
+                bg = "rgba(37, 99, 235, 0.1)"
                 border = "2px dashed #2563EB"
-                color = "#1E3A8A"
+                color = "var(--primary-color, #2563EB)"
                 status_color = "#2563EB"
-                status_text = status_label
+                status_text = status_lbl_translated
+                desc_color = "var(--text-color, #1F2937)"
             elif state == 'completed':
-                bg = "#ECFDF5"
+                bg = "rgba(16, 185, 129, 0.1)"
                 border = "2px solid #10B981"
-                color = "#065F46"
+                color = "#10B981"
                 status_color = "#10B981"
-                status_text = "Completed"
+                status_text = get_translated_label("Completed", lang_code)
+                desc_color = "var(--text-color, #1F2937)"
             else:
-                bg = "#F8FAFC"
-                border = "1px solid #E2E8F0"
+                bg = "rgba(148, 163, 184, 0.05)"
+                border = "1px solid rgba(128, 128, 128, 0.2)"
                 color = "#64748B"
                 status_color = "#94A3B8"
-                status_text = "Pending"
+                status_text = get_translated_label("Pending", lang_code)
+                desc_color = "#94A3B8"
                 
             return f"""
-            <div style="background-color: {bg}; border: {border}; border-radius: 8px; padding: 12px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); min-height: 100px;">
-                <div style="font-size: 1.4rem; margin-bottom: 2px;">{icon}</div>
-                <div style="font-weight: bold; font-size: 0.95rem; color: {color};">{title}</div>
-                <div style="margin-top: 5px; font-size: 0.8rem; font-weight: bold; color: {status_color}; text-transform: uppercase; letter-spacing: 0.5px;">
+            <div style="background-color: {bg}; border: {border}; border-radius: 12px; padding: 14px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02); min-height: 150px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+                <div style="font-size: 1.8rem; margin-bottom: 4px;">{icon}</div>
+                <div style="font-weight: 700; font-size: 1rem; color: {color};">{title}</div>
+                <div style="margin-top: 6px; font-size: 0.8rem; font-weight: 800; color: {status_color}; text-transform: uppercase; letter-spacing: 0.8px;">
                     {status_text}
+                </div>
+                <div style="margin-top: 8px; font-size: 0.85rem; color: {desc_color}; font-style: italic; line-height: 1.3; font-weight: 500; word-break: break-word;">
+                    {exec_info}
                 </div>
             </div>
             """
             
-        col_p, col_w, col_e = st.columns(3)
+        col_p, col_a1, col_w, col_a2, col_e = st.columns([10, 1, 10, 1, 10])
         with col_p:
-            st.markdown(get_agent_card_html(trans.get('planner_agent_node', lang_code), "Planning", "📝", planner_state), unsafe_allow_html=True)
+            st.markdown(get_agent_card_html(trans.get('planner_agent_node', lang_code), "Planning", "📝", planner_state, planner_info), unsafe_allow_html=True)
+        with col_a1:
+            st.markdown("""
+            <div style="display: flex; align-items: center; justify-content: center; height: 150px; font-size: 1.8rem; color: #94A3B8;">
+                ➡️
+            </div>
+            """, unsafe_allow_html=True)
         with col_w:
-            st.markdown(get_agent_card_html(trans.get('worker_agent_node', lang_code), "Executing", "⚙️", worker_state), unsafe_allow_html=True)
+            st.markdown(get_agent_card_html(trans.get('worker_agent_node', lang_code), "Executing", "⚙️", worker_state, worker_info), unsafe_allow_html=True)
+        with col_a2:
+            st.markdown("""
+            <div style="display: flex; align-items: center; justify-content: center; height: 150px; font-size: 1.8rem; color: #94A3B8;">
+                ➡️
+            </div>
+            """, unsafe_allow_html=True)
         with col_e:
-            st.markdown(get_agent_card_html(trans.get('evaluator_agent_node', lang_code), "Validating", "🛡️", evaluator_state), unsafe_allow_html=True)
+            st.markdown(get_agent_card_html(trans.get('evaluator_agent_node', lang_code), "Validating", "🛡️", evaluator_state, evaluator_info), unsafe_allow_html=True)
 
         if not res:
             st.info(trans.get("prompt_submit_request", lang_code))
@@ -553,24 +770,53 @@ with tab_console:
 
             st.markdown("---")
 
-            # 2. Key Observability Status Cards
+            # 2. Key Observability Status Cards (Emergency Telemetry Cards)
             st.markdown(f"### {trans.get('telemetry_cards', lang_code)}")
-            sc1, sc2 = st.columns(2)
+            sc1, sc2, sc3, sc4 = st.columns(4)
+            
+            # Localize Telemetry Labels
+            lbl_type = get_translated_label("Emergency Type", lang_code)
+            lbl_priority = trans.get("priority_label", lang_code)
+            lbl_confidence = get_translated_label("Confidence Score", lang_code)
+            lbl_status = get_translated_label("Agent Status", lang_code)
+            
+            category_val = res.get("category", "General Assistance")
+            category_translated = get_translated_label(category_val, lang_code)
+            
+            priority_val = res.get("priority", "UNKNOWN")
+            priority_translated = get_translated_label(priority_val, lang_code)
+            p_color = "#DC2626" if priority_val in ["CRITICAL", "HIGH"] else "#D97706"
+            
+            confidence_val = f"{int(res.get('priority_score', 0.95) * 100)}%"
+            
+            status_val = get_translated_label("Validated", lang_code)
+            
             with sc1:
                 st.markdown(f"""
-                <div class='metric-card'>
-                    <div class='metric-label'>{trans.get('status_label', lang_code)}</div>
-                    <div class='metric-value' style='color: #059669;'>{trans.get('status_verified', lang_code)}</div>
+                <div class='telemetry-card' style='border-top: 4px solid #3B82F6;'>
+                    <div class='telemetry-label'>{lbl_type}</div>
+                    <div class='telemetry-value' style='color: #3B82F6;'>{category_translated}</div>
                 </div>
                 """, unsafe_allow_html=True)
             with sc2:
-                # Color code priority
-                p_tier = res["priority"]
-                p_color = "#DC2626" if p_tier in ["CRITICAL", "HIGH"] else "#D97706"
                 st.markdown(f"""
-                <div class='metric-card' style='border-top: 5px solid {p_color};'>
-                    <div class='metric-label'>{trans.get('priority_label', lang_code)}</div>
-                    <div class='metric-value' style='color: {p_color};'>{p_tier}</div>
+                <div class='telemetry-card' style='border-top: 4px solid {p_color};'>
+                    <div class='telemetry-label'>{lbl_priority}</div>
+                    <div class='telemetry-value' style='color: {p_color};'>{priority_translated}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with sc3:
+                st.markdown(f"""
+                <div class='telemetry-card' style='border-top: 4px solid #8B5CF6;'>
+                    <div class='telemetry-label'>{lbl_confidence}</div>
+                    <div class='telemetry-value' style='color: #8B5CF6;'>{confidence_val}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with sc4:
+                st.markdown(f"""
+                <div class='telemetry-card' style='border-top: 4px solid #10B981;'>
+                    <div class='telemetry-label'>{lbl_status}</div>
+                    <div class='telemetry-value' style='color: #10B981;'>{status_val}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -609,25 +855,41 @@ with tab_console:
                     view_directions_text = trans.get("view_directions", lang_code)
                     lbl_contact_text = trans.get("emergency_contact_label", lang_code).replace("Emergency ", "").strip()
                     
+                    # Localize card elements
+                    lbl_verification_score = get_translated_label("Verification Score", lang_code)
+                    lbl_btn_maps = get_translated_label("Open Google Maps", lang_code)
+                    lbl_btn_call = get_translated_label("Call", lang_code)
+                    lbl_btn_directions = get_translated_label("View Directions", lang_code)
+
                     st.markdown(f"""
-                    <div style='background-color: #F8FAFC; color: #0F172A; padding: 15px; border-radius: 8px; margin-bottom: 10px; border-left: 4px solid #10B981; border: 1px solid #E2E8F0;'>
-                        <a href="{map_url}" target="_blank" style="text-decoration: none; color: inherit; cursor: pointer;">
-                            <strong style='color: #1E3A8A; font-size: 1.1rem; text-decoration: underline;'>🏥 {idx+1}. {r['name']}</strong>
-                        </a>
-                        <span style='color: #0F172A; font-weight: bold; background-color: #E2E8F0; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; margin-left: 8px;'>Score: {v_score}%</span><br>
-                        <span style='color: #334155; display: block; margin-top: 5px;'>{addr_label}: {r['address']}</span>
-                        <div style="margin-top: 5px; font-size: 0.95rem;">
-                            <span style='color: #475569; font-weight: 500;'>{lbl_contact_text}:</span> 
-                            <a href="tel:{phone_clean}" style="color: #2563EB; font-weight: bold; text-decoration: underline;">{r['phone']}</a>
-                            | <a href="{directions_url}" target="_blank" style="color: #059669; font-weight: bold; text-decoration: underline;">{view_directions_text}</a>
+                    <div style='background-color: var(--secondary-background-color, rgba(128,128,128,0.05)); color: var(--text-color, #0F172A); padding: 18px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #10B981; border: 1px solid rgba(128, 128, 128, 0.2); box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+                            <strong style='color: var(--primary-color, #2563EB); font-size: 1.15rem;'>🏥 {idx+1}. {r['name']}</strong>
+                            <span style='color: white; font-weight: bold; background-color: #10B981; padding: 3px 8px; border-radius: 6px; font-size: 0.85rem;'>{lbl_verification_score}: {v_score}%</span>
                         </div>
-                        <div style="margin-top: 8px;">
-                            <span style='color: #475569; font-weight: 500;'>{lbl_status_text}:</span> <span class='status-badge {status_badge}'>{r['status']}</span> | 
-                            <span style='color: #475569; font-weight: 500;'>{lbl_freshness_text}:</span> <span class='status-badge {fresh_badge}'>{fresh_badge_text}</span> | 
-                            <span style='color: #475569; font-weight: 500;'>{lbl_contact_format_text}:</span> <span class='status-badge {phone_badge}'>{verified_badge_text}</span>
+                        <div style='color: var(--text-color, #334155); opacity: 0.9; margin-top: 8px; font-size: 0.95rem;'>
+                            <strong>{addr_label}:</strong> {r['address']}
+                        </div>
+                        <div style="margin-top: 6px; font-size: 0.95rem; color: var(--text-color, #334155); opacity: 0.9;">
+                            <strong>{lbl_contact_text}:</strong> {r['phone']}
+                        </div>
+                        <div style="margin-top: 8px; font-size: 0.9rem;">
+                            <span style='font-weight: 600; color: var(--text-color, #475569);'>{lbl_status_text}</span> <span class='status-badge {status_badge}'>{r['status']}</span> | 
+                            <span style='font-weight: 600; color: var(--text-color, #475569);'>{lbl_freshness_text}</span> <span class='status-badge {fresh_badge}'>{fresh_badge_text}</span> | 
+                            <span style='font-weight: 600; color: var(--text-color, #475569);'>{lbl_contact_format_text}</span> <span class='status-badge {phone_badge}'>{verified_badge_text}</span>
+                        </div>
+                        <div style="display: flex; gap: 12px; margin-top: 15px; flex-wrap: wrap;">
+                            <a href="{map_url}" target="_blank" style="text-decoration: none; background-color: #2563EB; color: white !important; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; transition: background-color 0.2s; border: none; box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);">
+                                📍 {lbl_btn_maps}
+                            </a>
+                            <a href="tel:{phone_clean}" style="text-decoration: none; background-color: #059669; color: white !important; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; transition: background-color 0.2s; border: none; box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);">
+                                📞 {lbl_btn_call}
+                            </a>
+                            <a href="{directions_url}" target="_blank" style="text-decoration: none; background-color: #4B5563; color: white !important; padding: 8px 16px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; display: inline-flex; align-items: center; gap: 6px; transition: background-color 0.2s; border: none; box-shadow: 0 2px 4px rgba(75, 85, 99, 0.2);">
+                                🧭 {lbl_btn_directions}
+                            </a>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
             else:
                 st.info(trans.get("no_resources", lang_code))
 
