@@ -1,4 +1,13 @@
 import streamlit as st
+
+# Configure Streamlit page layout to wide mode first
+st.set_page_config(
+    page_title="CrisisAssist AI",
+    page_icon="🚨",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 import os
 import sys
 import time
@@ -30,15 +39,6 @@ from dashboard.logs_dashboard import LogsDashboard
 from utils.language_manager import LanguageManager
 from utils.location_detector import LocationDetector
 from main_agent import MainAgentController
-
-
-# Configure Streamlit page layout to wide mode first
-st.set_page_config(
-    page_title="CrisisAssist AI",
-    page_icon="🚨",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Initialize singletons
 trans = LanguageManager()
