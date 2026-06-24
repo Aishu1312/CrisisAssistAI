@@ -366,6 +366,23 @@ with tab_console:
         contact_name = profile_data.get("contact_name", "").strip() or profile_data.get("emergency_contact", {}).get("name", "").strip()
         contact_phone = profile_data.get("contact_phone", "").strip() or profile_data.get("emergency_contact", {}).get("phone", "").strip()
         
+        # Combine contact name and phone into Emergency Contact
+        emergency_contact = ""
+        if contact_name and contact_phone:
+            phone_val = contact_phone
+            digits_only = "".join(c for c in phone_val if c.isdigit())
+            if not phone_val.startswith("+") and len(digits_only) == 10:
+                phone_val = f"+91-{digits_only}"
+            emergency_contact = f"{contact_name} ({phone_val})"
+        elif contact_name:
+            emergency_contact = contact_name
+        elif contact_phone:
+            phone_val = contact_phone
+            digits_only = "".join(c for c in phone_val if c.isdigit())
+            if not phone_val.startswith("+") and len(digits_only) == 10:
+                phone_val = f"+91-{digits_only}"
+            emergency_contact = phone_val
+
         # Retrieve translation strings
         title_lbl = trans.get("current_user_memory_title", lang_code)
         if title_lbl == "current_user_memory_title":
@@ -378,6 +395,14 @@ with tab_console:
         if conditions_lbl == "medical_conditions_label":
             conditions_lbl = "Medical Conditions"
             
+        default_loc_lbl = trans.get("default_loc_label", lang_code)
+        if default_loc_lbl == "default_loc_label":
+            default_loc_lbl = "Default Location"
+
+        emergency_contact_lbl = trans.get("emergency_contact_label", lang_code).replace(":", "").strip()
+        if emergency_contact_lbl == "emergency_contact_label":
+            emergency_contact_lbl = "Emergency Contact"
+
         memory_lines = []
         if name:
             memory_lines.append(f"""
@@ -387,10 +412,9 @@ with tab_console:
                 </div>
             """)
         if location:
-            curr_loc_lbl = trans.get("status_current_location", lang_code).replace("📍", "").replace(":", "").strip()
             memory_lines.append(f"""
                 <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{curr_loc_lbl}:</span>
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{default_loc_lbl}:</span>
                     <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{location}</span>
                 </div>
             """)
@@ -408,18 +432,11 @@ with tab_console:
                     <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{conditions}</span>
                 </div>
             """)
-        if contact_name:
+        if emergency_contact:
             memory_lines.append(f"""
                 <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{trans.get("contact_name_label", lang_code)}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{contact_name}</span>
-                </div>
-            """)
-        if contact_phone:
-            memory_lines.append(f"""
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{trans.get("contact_phone_label", lang_code)}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{contact_phone}</span>
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{emergency_contact_lbl}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{emergency_contact}</span>
                 </div>
             """)
             

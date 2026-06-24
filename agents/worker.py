@@ -59,7 +59,7 @@ class WorkerAgent:
                 )
                 response = safe_generate_content(
                     self.client,
-                    model="gemini-flash-latest",
+                    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
                     contents=prompt
                 )
                 text = response.text.strip()
@@ -198,7 +198,7 @@ class WorkerAgent:
                 )
                 response = safe_generate_content(
                     self.client,
-                    model="gemini-flash-latest",
+                    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
                     contents=prompt,
                     config={"system_instruction": system_instruction}
                 )
@@ -222,7 +222,7 @@ class WorkerAgent:
                 )
                 response = safe_generate_content(
                     self.client,
-                    model="gemini-flash-latest",
+                    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
                     contents=prompt
                 )
                 summary_checklist = response.text.strip()

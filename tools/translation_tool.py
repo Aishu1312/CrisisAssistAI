@@ -40,7 +40,7 @@ class TranslationTool:
                 )
                 response = safe_generate_content(
                     self.client,
-                    model="gemini-flash-latest",
+                    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
                     contents=prompt,
                 )
                 detected = response.text.strip().lower()
@@ -74,14 +74,10 @@ class TranslationTool:
                 )
                 response = safe_generate_content(
                     self.client,
-                    model="gemini-flash-latest",
+                    model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
                     contents=prompt,
                 )
                 translated = response.text.strip()
                 if translated:
                     return translated
-            except Exception as e:
-                print(f"Online translation failed: {e}. Falling back to original text.")
-                
-        tgt_name = self.languages.get(tgt_clean, "English")
-        return f"[{tgt_name} Translation]: {text}"
+        return text

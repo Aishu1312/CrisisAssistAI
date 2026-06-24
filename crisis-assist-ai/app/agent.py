@@ -84,7 +84,8 @@ def get_worker_instruction(ctx: Any) -> str:
         f"The communication language is {lang}. You MUST generate the safety steps, shelter names, and descriptions in {lang}.\n"
         f"Context: {{'language': '{lang}', 'user_profile': {profile}}}\n"
         "Use the search_shelters tool to find safe shelter options, and the get_emergency_contacts tool\n"
-        "to retrieve verified hotline numbers for the location mentioned by the user."
+        "to retrieve verified hotline numbers for the location mentioned by the user.\n"
+        "Format each contact and shelter option as: 'Name | Address | Phone' in the target language."
     )
 
 def get_orchestrator_instruction(ctx: Any) -> str:
@@ -109,6 +110,7 @@ def get_evaluator_instruction(ctx: Any) -> str:
         f"The communication language is {lang}. You MUST generate and format the entire response in {lang}.\n"
         f"Context: {{'language': '{lang}', 'user_profile': {profile}}}\n"
         "Ensure all safety instructions, resource names/descriptions/addresses, and trace reasoning explanation are written completely in the target language. Do not mix languages.\n"
+        "Each resource in the verified_resources list MUST be strictly formatted as: 'Name | Address | Phone' in the target language. Do not change this pipe-separated format.\n"
         "Return the final structured guidance containing priority (LOW, MEDIUM, HIGH, or CRITICAL), category, immediate safety instructions, verified resources list, and your trace reasoning explanation."
     )
 
