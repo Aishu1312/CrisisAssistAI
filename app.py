@@ -342,25 +342,29 @@ with tab_console:
                         location_details=st.session_state.active_location
                     )
                     st.session_state.result = result
-                    st.rerun()
-
-        # Render Memory status Card directly from session state keys for immediate UI updates
-        name = st.session_state.get("profile_name", "").strip() or "Not provided"
-        location = st.session_state.get("profile_location", "").strip() or "Not provided"
-        allergies = st.session_state.get("profile_allergies", "").strip() or "Not provided"
-        conditions = st.session_state.get("profile_conditions", "").strip() or "Not provided"
+                   # Render Memory status Card directly from user memory profile for immediate UI updates
+        profile_data = controller.user_memory.get_profile()
+        name = profile_data.get("name", "").strip()
+        location = profile_data.get("location", "").strip()
         
-        contact_name = st.session_state.get("profile_contact_name", "").strip()
-        contact_phone = st.session_state.get("profile_contact_phone", "").strip()
+        allergies = profile_data.get("medical_alerts", "").strip()
+        if not allergies:
+            allergies_list = profile_data.get("allergies", [])
+            if isinstance(allergies_list, list):
+                allergies = ", ".join(allergies_list)
+            else:
+                allergies = str(allergies_list)
+        allergies = allergies.strip()
         
-        if contact_name and contact_phone:
-            contact_display = f"{contact_name} ({contact_phone})"
-        elif contact_name:
-            contact_display = contact_name
-        elif contact_phone:
-            contact_display = contact_phone
+        conditions_list = profile_data.get("medical_conditions", [])
+        if isinstance(conditions_list, list):
+            conditions = ", ".join(conditions_list) if conditions_list else ""
         else:
-            contact_display = "Not provided"
+            conditions = str(conditions_list)
+        conditions = conditions.strip()
+        
+        contact_name = profile_data.get("contact_name", "").strip() or profile_data.get("emergency_contact", {}).get("name", "").strip()
+        contact_phone = profile_data.get("contact_phone", "").strip() or profile_data.get("emergency_contact", {}).get("phone", "").strip()
         
         # Retrieve translation strings
         title_lbl = trans.get("current_user_memory_title", lang_code)
@@ -368,37 +372,62 @@ with tab_console:
             title_lbl = "Current User Memory"
             
         name_lbl = trans.get("name_label", lang_code)
-        loc_lbl = trans.get("default_loc_label", lang_code)
         alerts_lbl = trans.get("medical_alerts_label", lang_code)
         
         conditions_lbl = trans.get("medical_conditions_label", lang_code)
         if conditions_lbl == "medical_conditions_label":
             conditions_lbl = "Medical Conditions"
             
+        memory_lines = []
+        if name:
+            memory_lines.append(f"""
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{name_lbl}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{name}</span>
+                </div>
+            """)
+        if location:
+            curr_loc_lbl = trans.get("status_current_location", lang_code).replace("📍", "").replace(":", "").strip()
+            memory_lines.append(f"""
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{curr_loc_lbl}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{location}</span>
+                </div>
+            """)
+        if allergies:
+            memory_lines.append(f"""
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{alerts_lbl}:</span>
+                    <span style="color: #DC2626; font-weight: bold; flex: 1; min-width: 150px; word-break: break-word;">{allergies}</span>
+                </div>
+            """)
+        if conditions:
+            memory_lines.append(f"""
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{conditions_lbl}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{conditions}</span>
+                </div>
+            """)
+        if contact_name:
+            memory_lines.append(f"""
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{trans.get("contact_name_label", lang_code)}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{contact_name}</span>
+                </div>
+            """)
+        if contact_phone:
+            memory_lines.append(f"""
+                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
+                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{trans.get("contact_phone_label", lang_code)}:</span>
+                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{contact_phone}</span>
+                </div>
+            """)
+            
         memory_card_html = f"""
         <div style="background-color: #F8FAFC; color: #0F172A; padding: 15px; border-radius: 8px; border: 1px solid #E2E8F0; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
             <h4 style="margin-top: 0; color: #1E3A8A; display: flex; align-items: center; gap: 8px; font-size: 1.1rem; border-bottom: 1px solid #E2E8F0; padding-bottom: 8px; margin-bottom: 10px;">👤 {title_lbl}</h4>
             <div style="font-size: 0.95rem; margin-top: 10px; line-height: 1.6;">
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{name_lbl}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{name}</span>
-                </div>
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{loc_lbl}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{location}</span>
-                </div>
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{alerts_lbl}:</span>
-                    <span style="color: #DC2626; font-weight: bold; flex: 1; min-width: 150px; word-break: break-word;">{allergies}</span>
-                </div>
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{conditions_lbl}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{conditions}</span>
-                </div>
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 120px; display: inline-block;">{trans.get("emergency_contact_label", lang_code)}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{contact_display}</span>
-                </div>
+                {"".join(memory_lines) if memory_lines else '<div style="color: #64748B; font-style: italic;">No profile data saved in memory.</div>'}
             </div>
         </div>
         """
@@ -412,12 +441,19 @@ with tab_console:
                 cat_key = "category_" + cat_raw.lower().replace(" & ", "_").replace(" ", "_")
                 cat_translated = trans.get(cat_key, lang_code)
                 st.markdown(f"- *{cat_translated}* ({trans.get('priority_label', lang_code)}: `{q.get('priority')}`): {q.get('summary')}")
-
+ 
     with col_response:
         res = st.session_state.result
         
         # Real-time Agent workflow nodes visualization
         st.markdown(f"### {trans.get('agent_pipeline_status', lang_code)}")
+        
+        # Display detected priority level dynamically inside Agent Pipeline Status
+        detected_p = controller.session_memory.current_priority
+        if detected_p and detected_p != "UNKNOWN":
+            p_color = "#DC2626" if detected_p in ["CRITICAL", "HIGH"] else "#D97706"
+            st.markdown(f"**{trans.get('priority_label', lang_code)}:** <span style='color:{p_color}; font-weight:bold; font-size:1.15rem;'>{detected_p}</span>", unsafe_allow_html=True)
+            
         active_state = controller.session_memory.active_agent
         
         # Determine states
@@ -472,6 +508,23 @@ with tab_console:
 
         if not res:
             st.info(trans.get("prompt_submit_request", lang_code))
+        elif res.get("status") == "AWAITING_APPROVAL":
+            st.warning(f"🚨 **Awaiting Approval:** {res['response']}")
+            
+            confirm_input = st.text_input("Type 'approve' to confirm emergency dispatch:", key="confirm_dispatch_input")
+            if st.button("Confirm Approval", type="primary", use_container_width=True):
+                if confirm_input.strip().lower() == "approve":
+                    st.session_state.dispatch_response = "approve"
+                    with st.spinner("Processing dispatch approval..."):
+                        result = controller.process_emergency_request(
+                            user_query="",
+                            target_lang_code=lang_code,
+                            location_details=st.session_state.active_location
+                        )
+                        st.session_state.result = result
+                        st.rerun()
+                else:
+                    st.error("Approval text must be 'approve'.")
         else:
             # 1. Main Actionable Advice
             st.markdown(f"### {trans.get('actionable_advice', lang_code)}")

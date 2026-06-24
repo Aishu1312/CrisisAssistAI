@@ -37,10 +37,10 @@ class UserMemory:
                     self.profile = json.load(f)
                     
                 # Clean up legacy mock/default values
-                mock_names = ["Jane Doe"]
-                mock_contacts = ["John Doe (Spouse)"]
-                mock_phones = ["+91-98765-43210"]
-                mock_locations = ["Goa, Maharashtra", "Goa"]
+                mock_names = ["Jane Doe", "Arjun Mehta"]
+                mock_contacts = ["John Doe (Spouse)", "Deepa Mehta (Wife)"]
+                mock_phones = ["+91-98765-43210", "+91-98989-12345"]
+                mock_locations = ["Goa, Maharashtra", "Goa", "Nagpur, Maharashtra"]
                 
                 if self.profile.get("name") in mock_names:
                     self.profile["name"] = ""
@@ -57,9 +57,11 @@ class UserMemory:
                 if self.profile.get("contact_phone") in mock_phones:
                     self.profile["contact_phone"] = ""
                 if "allergies" in self.profile:
-                    self.profile["allergies"] = [a for a in self.profile["allergies"] if a not in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy"]]
-                if self.profile.get("medical_alerts") in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy"]:
+                    self.profile["allergies"] = [a for a in self.profile["allergies"] if a not in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy", "Milk", "Dust"]]
+                if self.profile.get("medical_alerts") in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy", "Milk, Dust"]:
                     self.profile["medical_alerts"] = ""
+                if "medical_conditions" in self.profile:
+                    self.profile["medical_conditions"] = [c for c in self.profile["medical_conditions"] if c not in ["Anxiety", "Depression", "PCOD"]]
 
                 # Ensure backwards-compatibility mapping keys
                 if "location" in self.profile:
