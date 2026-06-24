@@ -406,37 +406,37 @@ with tab_console:
         memory_lines = []
         if name:
             memory_lines.append(f"""
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{name_lbl}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{name}</span>
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{name_lbl}</div>
+                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{name}</div>
                 </div>
             """)
         if location:
             memory_lines.append(f"""
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{default_loc_lbl}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{location}</span>
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{default_loc_lbl}</div>
+                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{location}</div>
                 </div>
             """)
         if allergies:
             memory_lines.append(f"""
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{alerts_lbl}:</span>
-                    <span style="color: #DC2626; font-weight: bold; flex: 1; min-width: 150px; word-break: break-word;">{allergies}</span>
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{alerts_lbl}</div>
+                    <div style="color: #DC2626; font-weight: bold; font-size: 1rem; margin-top: 2px; word-break: break-word;">{allergies}</div>
                 </div>
             """)
         if conditions:
             memory_lines.append(f"""
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{conditions_lbl}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{conditions}</span>
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{conditions_lbl}</div>
+                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{conditions}</div>
                 </div>
             """)
         if emergency_contact:
             memory_lines.append(f"""
-                <div style="margin-bottom: 8px; display: flex; flex-flow: row wrap; align-items: baseline;">
-                    <span style="font-weight: bold; color: #475569; margin-right: 6px; min-width: 180px; display: inline-block;">{emergency_contact_lbl}:</span>
-                    <span style="color: #0F172A; flex: 1; min-width: 150px; word-break: break-word;">{emergency_contact}</span>
+                <div style="margin-bottom: 12px;">
+                    <div style="font-weight: bold; color: #475569; font-size: 0.95rem;">{emergency_contact_lbl}</div>
+                    <div style="color: #0F172A; font-size: 1rem; margin-top: 2px; word-break: break-word;">{emergency_contact}</div>
                 </div>
             """)
             
