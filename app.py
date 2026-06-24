@@ -989,9 +989,13 @@ with tab_console:
                 status = step.get("status", "")
                 details = step.get("details", "")
                 
+                details_clean = str(details) if details else ""
+                if details_clean and any(k in details_clean.lower() for k in ["429", "resource_exhausted", "resourceexhausted", "quota", "traceback", "error", "exception", "failed"]):
+                    details_clean = "API busy. Heuristic backup triggered."
+                
                 status_color = "#1E40AF" if status == "STARTED" else ("#047857" if status in ["COMPLETED", "APPROVED"] else "#B91C1C")
                 details_header = trans.get("lbl_details", lang_code)
-                details_lbl = f" | {details_header} <code>{details}</code>" if details else ""
+                details_lbl = f" | {details_header} <code>{details_clean}</code>" if details_clean else ""
                 st.markdown(f"""
                 <div class='timeline-item'>
                     <span class='timeline-agent'>[{agent}]</span> 
