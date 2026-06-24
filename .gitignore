@@ -65,3 +65,9 @@ user_profile.json
 temp_audio/
 *.mp3
 *.wav
+
+# Local documentation & agent files
+agent_builder_playbook.md
+GETTING_STARTED.md
+diff_main_agent*.txt
+
