@@ -80,4 +80,6 @@ class TranslationTool:
                 translated = response.text.strip()
                 if translated:
                     return translated
+            except Exception as e:
+                print(f"Translation failed: {e}")
         return text
