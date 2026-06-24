@@ -890,6 +890,7 @@ with tab_console:
                             </a>
                         </div>
                     </div>
+                    """, unsafe_allow_html=True)
             else:
                 st.info(trans.get("no_resources", lang_code))
 
