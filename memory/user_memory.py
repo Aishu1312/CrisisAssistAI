@@ -14,20 +14,39 @@ class UserMemory:
 
     def load_default_profile(self) -> Dict[str, Any]:
         return {
-            "name": "",
-            "location": "",
-            "home_location": "",
-            "medical_alerts": "",
-            "allergies": [],
-            "medical_conditions": [],
-            "contact_name": "",
-            "contact_phone": "",
+            "name": "Arjun Mehta",
+            "location": "Nagpur, Maharashtra",
+            "home_location": "Nagpur, Maharashtra",
+            "medical_alerts": "Milk, Dust",
+            "allergies": ["Milk", "Dust"],
+            "medical_conditions": ["Anxiety", "Depression", "PCOD"],
+            "contact_name": "Deepa Mehta (Wife)",
+            "contact_phone": "+91-98989-12345",
             "emergency_contact": {
-                "name": "",
-                "phone": ""
+                "name": "Deepa Mehta (Wife)",
+                "phone": "+91-98989-12345"
             },
             "preferred_language": "English",
-            "past_emergency_summaries": []
+            "past_emergency_summaries": [
+                {
+                    "category": "Fire Hazard",
+                    "priority": "CRITICAL",
+                    "summary": "Emergency resolved in Mumbai.",
+                    "query": "There is a fire in my apartment building"
+                },
+                {
+                    "category": "General Support",
+                    "priority": "LOW",
+                    "summary": "Emergency type General Support classified as LOW. Location: Pune.",
+                    "query": "Need general assistance in Pune"
+                },
+                {
+                    "category": "Medical Emergency",
+                    "priority": "CRITICAL",
+                    "summary": "Emergency type Medical classified as CRITICAL. Location: Pune.",
+                    "query": "Urgent medical assistance required in Pune"
+                }
+            ]
         }
 
     def load_from_disk(self):
@@ -35,33 +54,6 @@ class UserMemory:
             try:
                 with open(self.filepath, "r", encoding="utf-8") as f:
                     self.profile = json.load(f)
-                    
-                # Clean up legacy mock/default values
-                mock_names = ["Jane Doe", "Arjun Mehta"]
-                mock_contacts = ["John Doe (Spouse)", "Deepa Mehta (Wife)"]
-                mock_phones = ["+91-98765-43210", "+91-98989-12345"]
-                mock_locations = ["Goa, Maharashtra", "Goa", "Nagpur, Maharashtra"]
-                
-                if self.profile.get("name") in mock_names:
-                    self.profile["name"] = ""
-                if self.profile.get("location") in mock_locations:
-                    self.profile["location"] = ""
-                if self.profile.get("home_location") in mock_locations:
-                    self.profile["home_location"] = ""
-                if self.profile.get("emergency_contact", {}).get("name") in mock_contacts:
-                    self.profile["emergency_contact"]["name"] = ""
-                if self.profile.get("emergency_contact", {}).get("phone") in mock_phones:
-                    self.profile["emergency_contact"]["phone"] = ""
-                if self.profile.get("contact_name") in mock_names:
-                    self.profile["contact_name"] = ""
-                if self.profile.get("contact_phone") in mock_phones:
-                    self.profile["contact_phone"] = ""
-                if "allergies" in self.profile:
-                    self.profile["allergies"] = [a for a in self.profile["allergies"] if a not in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy", "Milk", "Dust"]]
-                if self.profile.get("medical_alerts") in ["Penicillin Allergy", "Severe Asthma, Penicillin Allergy", "Milk, Dust"]:
-                    self.profile["medical_alerts"] = ""
-                if "medical_conditions" in self.profile:
-                    self.profile["medical_conditions"] = [c for c in self.profile["medical_conditions"] if c not in ["Anxiety", "Depression", "PCOD"]]
 
                 # Ensure backwards-compatibility mapping keys
                 if "location" in self.profile:
@@ -88,6 +80,29 @@ class UserMemory:
                 
                 if "medical_conditions" not in self.profile:
                     self.profile["medical_conditions"] = []
+                    
+                if "past_emergency_summaries" not in self.profile or not self.profile["past_emergency_summaries"]:
+                    # If empty, load the default mock past requests
+                    self.profile["past_emergency_summaries"] = [
+                        {
+                            "category": "Fire Hazard",
+                            "priority": "CRITICAL",
+                            "summary": "Emergency resolved in Mumbai.",
+                            "query": "There is a fire in my apartment building"
+                        },
+                        {
+                            "category": "General Support",
+                            "priority": "LOW",
+                            "summary": "Emergency type General Support classified as LOW. Location: Pune.",
+                            "query": "Need general assistance in Pune"
+                        },
+                        {
+                            "category": "Medical Emergency",
+                            "priority": "CRITICAL",
+                            "summary": "Emergency type Medical classified as CRITICAL. Location: Pune.",
+                            "query": "Urgent medical assistance required in Pune"
+                        }
+                    ]
                     
                 contact = self.profile.get("emergency_contact", {})
                 if not isinstance(contact, dict):

@@ -153,57 +153,103 @@ class MainAgentController:
         pending_interrupt_id = None
         pending_message = None
         
-        try:
-            async for event in self.runner.run_async(
-                user_id="user",
-                session_id=session_id,
-                new_message=new_message
-            ):
-                # Log step status for UI dashboard representation
-                if event.author:
-                    author_name = event.author
-                    action_name = "Executing node"
-                    status_name = "COMPLETED"
-                    
-                    if "planner" in author_name.lower():
-                        author_name = "PlannerAgent"
-                        action_name = "Plan construction & Triage"
-                    elif "worker" in author_name.lower():
-                        author_name = "WorkerAgent"
-                        action_name = "Execution of plan steps"
-                    elif "evaluator" in author_name.lower():
-                        author_name = "EvaluatorAgent"
-                        action_name = "Response safety review"
-                        status_name = "APPROVED"
-                    elif "security_checkpoint" in author_name.lower():
-                        author_name = "SecurityCheckpoint"
-                        action_name = "PII and injection scan"
+        attempts = 2
+        for attempt in range(attempts):
+            try:
+                async for event in self.runner.run_async(
+                    user_id="user",
+                    session_id=session_id,
+                    new_message=new_message
+                ):
+                    # Log step status for UI dashboard representation
+                    if event.author:
+                        author_name = event.author
+                        action_name = "Executing node"
+                        status_name = "COMPLETED"
                         
-                    self.session_memory.add_step(author_name, action_name, "STARTED")
-                    self.session_memory.add_step(author_name, action_name, status_name)
-                    
-                    # Capture priority level dynamically from planner
-                    if "planner" in event.author.lower() and event.output is not None:
-                        out = event.output
-                        planner_priority = "UNKNOWN"
-                        if isinstance(out, dict) and "priority" in out:
-                            planner_priority = out["priority"]
-                        elif hasattr(out, "priority"):
-                            planner_priority = out.priority
-                        if planner_priority != "UNKNOWN":
-                            self.session_memory.current_priority = planner_priority
+                        if "planner" in author_name.lower():
+                            author_name = "PlannerAgent"
+                            action_name = "Plan construction & Triage"
+                        elif "worker" in author_name.lower():
+                            author_name = "WorkerAgent"
+                            action_name = "Execution of plan steps"
+                        elif "evaluator" in author_name.lower():
+                            author_name = "EvaluatorAgent"
+                            action_name = "Response safety review"
+                            status_name = "APPROVED"
+                        elif "security_checkpoint" in author_name.lower():
+                            author_name = "SecurityCheckpoint"
+                            action_name = "PII and injection scan"
                             
-                if isinstance(event, RequestInput):
-                    awaiting_approval = True
-                    pending_interrupt_id = event.interrupt_id
-                    pending_message = event.message
+                        self.session_memory.add_step(author_name, action_name, "STARTED")
+                        self.session_memory.add_step(author_name, action_name, status_name)
+                        
+                        # Capture priority level dynamically from planner
+                        if "planner" in event.author.lower() and event.output is not None:
+                            out = event.output
+                            planner_priority = "UNKNOWN"
+                            if isinstance(out, dict) and "priority" in out:
+                                planner_priority = out["priority"]
+                            elif hasattr(out, "priority"):
+                                planner_priority = out.priority
+                            if planner_priority and planner_priority != "UNKNOWN":
+                                norm_p = planner_priority.strip().upper()
+                                if norm_p in ["LOW", "MEDIUM", "HIGH", "CRITICAL"]:
+                                    self.session_memory.current_priority = norm_p
+                                else:
+                                    self.session_memory.current_priority = "MEDIUM"
+                                
+                    if isinstance(event, RequestInput):
+                        awaiting_approval = True
+                        pending_interrupt_id = event.interrupt_id
+                        pending_message = event.message
+                        
+                    if event.output is not None:
+                        final_guidance = event.output
+                break
+            except Exception as e:
+                err_msg = str(e)
+                if ("429" in err_msg or "ResourceExhausted" in err_msg or "quota" in err_msg.lower()) and attempt < attempts - 1:
+                    print(f"Internal log: Gemini API quota exceeded (429). Retrying in 1.5s (Attempt {attempt+1}/{attempts})...")
+                    await asyncio.sleep(1.5)
+                    continue
+                
+                print(f"Internal log: Workflow runner exception: {e}")
+                self.session_memory.add_step("System", "Execution error", "ERROR", "Internal system busy")
+                
+                friendly_response = "Unable to generate complete guidance currently. Please retry or provide more details."
+                if "429" in err_msg or "ResourceExhausted" in err_msg or "quota" in err_msg.lower():
+                    friendly_response = "AI assistance is temporarily busy. Please try again shortly."
                     
-                if event.output is not None:
-                    final_guidance = event.output
-        except Exception as e:
-            print(f"Workflow runner exception: {e}")
-            self.session_memory.add_step("System", "Execution error", "ERROR", str(e))
-            final_guidance = None
+                friendly_explanation = "Response validation is temporarily unavailable. Please retry."
+                
+                if target_lang_code != "en":
+                    try:
+                        friendly_response = self.translation_tool.translate(friendly_response, "en", target_lang_code)
+                    except Exception:
+                        pass
+                    try:
+                        friendly_explanation = self.translation_tool.translate(friendly_explanation, "en", target_lang_code)
+                    except Exception:
+                        pass
+                
+                st.session_state.clear_adk_session = True
+                
+                return {
+                    "trace_id": session_id,
+                    "response": friendly_response,
+                    "priority": "MEDIUM",
+                    "priority_score": 0.5,
+                    "category": "Error",
+                    "detected_lang": target_lang_code,
+                    "detected_city": location_details.get("city", "Mumbai") if location_details else "Mumbai",
+                    "coordinates": location_details.get("coords", (19.0760, 72.8777)) if location_details else (19.0760, 72.8777),
+                    "audio_path": None,
+                    "verified_resources": [],
+                    "eval_score": 0.0,
+                    "duration_ms": int((time.time() - start_time) * 1000),
+                    "decision_explanation": friendly_explanation
+                }
             
         if awaiting_approval:
             self.session_memory.add_step("HumanDispatchGate", "Waiting for dispatch confirmation", "STARTED")
@@ -235,7 +281,10 @@ class MainAgentController:
             else:
                 final_guidance_dict = {}
 
-            priority = final_guidance_dict.get("priority", "UNKNOWN")
+            priority = final_guidance_dict.get("priority", "MEDIUM").strip().upper()
+            if priority not in ["LOW", "MEDIUM", "HIGH", "CRITICAL"]:
+                priority = "MEDIUM"
+                
             category = final_guidance_dict.get("category", "General Assistance")
             immediate_safety = final_guidance_dict.get("immediate_safety_instructions", "")
             resources = final_guidance_dict.get("verified_resources", [])
@@ -259,21 +308,31 @@ class MainAgentController:
                 })
             self.session_memory.set_verified_resources(formatted_resources)
             
-            # Translate decision reasoning if lang is not english and it's in English
+            # Translate decision reasoning if lang is not english
             decision_translated = reasoning
-            is_english = all(ord(c) < 128 for c in reasoning)
-            if target_lang_code != "en" and is_english:
+            if target_lang_code != "en" and reasoning:
                 try:
                     decision_translated = self.translation_tool.translate(reasoning, "en", target_lang_code)
+                    # Scrub translation headers/tags
+                    decision_translated = re.sub(r"^\[[^\]]+\]", "", decision_translated)
+                    decision_translated = re.sub(r"^Translate[d]?\s+[^:]+:\s*", "", decision_translated, flags=re.IGNORECASE)
+                    decision_translated = re.sub(r"^Translation:\s*", "", decision_translated, flags=re.IGNORECASE)
+                    decision_translated = re.sub(r"^\([^)]+\)", "", decision_translated)
+                    decision_translated = decision_translated.strip()
                 except Exception as e:
                     print(f"Reasoning translation failed: {e}")
             
-            # Translate safety instructions if they are in English and target is not English
+            # Translate safety instructions if target is not English
             safety_translated = immediate_safety
-            is_safety_english = all(ord(c) < 128 for c in immediate_safety)
-            if target_lang_code != "en" and is_safety_english:
+            if target_lang_code != "en" and immediate_safety:
                 try:
                     safety_translated = self.translation_tool.translate(immediate_safety, "en", target_lang_code)
+                    # Scrub translation headers/tags
+                    safety_translated = re.sub(r"^\[[^\]]+\]", "", safety_translated)
+                    safety_translated = re.sub(r"^Translate[d]?\s+[^:]+:\s*", "", safety_translated, flags=re.IGNORECASE)
+                    safety_translated = re.sub(r"^Translation:\s*", "", safety_translated, flags=re.IGNORECASE)
+                    safety_translated = re.sub(r"^\([^)]+\)", "", safety_translated)
+                    safety_translated = safety_translated.strip()
                 except Exception as e:
                     print(f"Safety instructions translation failed: {e}")
                     
@@ -318,11 +377,29 @@ class MainAgentController:
                 "decision_explanation": decision_translated
             }
 
+        friendly_response = "Unable to generate complete guidance currently. Please retry or provide more details."
+        friendly_explanation = "Response validation is temporarily unavailable. Please retry."
+        if target_lang_code != "en":
+            try:
+                friendly_response = self.translation_tool.translate(friendly_response, "en", target_lang_code)
+                friendly_response = re.sub(r"^\[[^\]]+\]", "", friendly_response)
+                friendly_response = re.sub(r"^Translate[d]?\s+[^:]+:\s*", "", friendly_response, flags=re.IGNORECASE)
+                friendly_response = friendly_response.strip()
+            except Exception:
+                pass
+            try:
+                friendly_explanation = self.translation_tool.translate(friendly_explanation, "en", target_lang_code)
+                friendly_explanation = re.sub(r"^\[[^\]]+\]", "", friendly_explanation)
+                friendly_explanation = re.sub(r"^Translate[d]?\s+[^:]+:\s*", "", friendly_explanation, flags=re.IGNORECASE)
+                friendly_explanation = friendly_explanation.strip()
+            except Exception:
+                pass
+
         return {
             "trace_id": session_id,
-            "response": "Error: Workflow failed to output valid guidance.",
-            "priority": "UNKNOWN",
-            "priority_score": 0.0,
+            "response": friendly_response,
+            "priority": "MEDIUM",
+            "priority_score": 0.5,
             "category": "Error",
             "detected_lang": target_lang_code,
             "detected_city": "Unknown",
@@ -331,5 +408,5 @@ class MainAgentController:
             "verified_resources": [],
             "eval_score": 0.0,
             "duration_ms": int((time.time() - start_time) * 1000),
-            "decision_explanation": "Error: Workflow failed to execute correctly."
+            "decision_explanation": friendly_explanation
         }

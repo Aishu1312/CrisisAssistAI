@@ -53,6 +53,37 @@ from main_agent import MainAgentController
 # Initialize singletons
 trans = LanguageManager()
 
+def heuristic_priority(query: str) -> str:
+    if not query:
+        return "MEDIUM"
+    query_lower = query.lower()
+    critical_patterns = [
+        r"\btrapped\b", r"\bburning\b", r"\bbleeding\b", r"\bheart attack\b", 
+        r"\bchoking\b", r"\bdrowning\b", r"\bcant breathe\b", r"\bcan't breathe\b",
+        r"\bbachao\b", r"\bmar gaya\b", r"\bkoil nahi hai\b", r"\bvaachva\b",
+        r"\burgent medical\b", r"\burgent\b"
+    ]
+    high_patterns = [
+        r"\bfire\b", r"\baag\b", r"\binjured\b", r"\baccident\b", r"\bstorm\b", 
+        r"\bflood\b", r"\bbhukamp\b", r"\bearthquake\b", r"\bchot\b", r"\bdanger\b",
+        r"\bunsafe\b", r"\bemergency\b", r"\bhelp\b"
+    ]
+    medium_patterns = [
+        r"\bclinic\b", r"\bpharmacy\b", r"\bmedicine\b", r"\bpower cut\b", 
+        r"\bdawa\b", r"\bpower outage\b", r"\bwater logging\b", r"\broad block\b"
+    ]
+    
+    for pattern in critical_patterns:
+        if re.search(pattern, query_lower):
+            return "CRITICAL"
+    for pattern in high_patterns:
+        if re.search(pattern, query_lower):
+            return "HIGH"
+    for pattern in medium_patterns:
+        if re.search(pattern, query_lower):
+            return "MEDIUM"
+    return "LOW"
+
 # Sync API keys to support both google-genai and older SDK expectations
 gemini_key = os.getenv("GEMINI_API_KEY")
 google_key = os.getenv("GOOGLE_API_KEY")
@@ -544,7 +575,7 @@ with tab_console:
                         location_details=st.session_state.active_location
                     )
                     st.session_state.result = result
-                   # Render Memory status Card directly from user memory profile for immediate UI updates
+        
         profile_data = controller.user_memory.get_profile()
         name = profile_data.get("name", "").strip()
         location = profile_data.get("location", "").strip()
@@ -568,7 +599,6 @@ with tab_console:
         contact_name = profile_data.get("contact_name", "").strip() or profile_data.get("emergency_contact", {}).get("name", "").strip()
         contact_phone = profile_data.get("contact_phone", "").strip() or profile_data.get("emergency_contact", {}).get("phone", "").strip()
         
-        # Combine contact name and phone into Emergency Contact
         emergency_contact = ""
         if contact_name and contact_phone:
             phone_val = contact_phone
@@ -585,79 +615,88 @@ with tab_console:
                 phone_val = f"+91-{digits_only}"
             emergency_contact = phone_val
 
-        # Retrieve translation strings
         title_lbl = get_translated_label("Current User Memory", lang_code)
-            
         name_lbl = trans.get("name_label", lang_code)
         alerts_lbl = trans.get("medical_alerts_label", lang_code)
-        
         conditions_lbl = trans.get("medical_conditions_label", lang_code)
-        if conditions_lbl == "medical_conditions_label":
-            conditions_lbl = "Medical Conditions"
-            
+        if conditions_lbl == "medical_conditions_label": conditions_lbl = "Medical Conditions"
         default_loc_lbl = trans.get("default_loc_label", lang_code)
-        if default_loc_lbl == "default_loc_label":
-            default_loc_lbl = "Default Location"
-
+        if default_loc_lbl == "default_loc_label": default_loc_lbl = "Default Location"
         emergency_contact_lbl = trans.get("emergency_contact_label", lang_code).replace(":", "").strip()
-        if emergency_contact_lbl == "emergency_contact_label":
-            emergency_contact_lbl = "Emergency Contact"
+        if emergency_contact_lbl == "emergency_contact_label": emergency_contact_lbl = "Emergency Contact"
+
+        name_trans = get_translated_label(name, lang_code) if name else ""
+        location_trans = get_translated_label(location, lang_code) if location else ""
+        allergies_trans = get_translated_label(allergies, lang_code) if allergies else ""
+        conditions_trans = get_translated_label(conditions, lang_code) if conditions else ""
+        emergency_contact_trans = get_translated_label(emergency_contact, lang_code) if emergency_contact else ""
 
         memory_lines = []
         if name:
-            memory_lines.append(f"""
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{name_lbl}</div>
-                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{name}</div>
-                </div>
-            """)
+            memory_lines.append(f'<div style="margin-bottom: 12px;"><div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{name_lbl}</div><div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{name_trans}</div></div>')
         if location:
-            memory_lines.append(f"""
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{default_loc_lbl}</div>
-                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{location}</div>
-                </div>
-            """)
+            memory_lines.append(f'<div style="margin-bottom: 12px;"><div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{default_loc_lbl}</div><div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{location_trans}</div></div>')
         if allergies:
-            memory_lines.append(f"""
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{alerts_lbl}</div>
-                    <div style="color: #EF4444; font-weight: bold; font-size: 1rem; margin-top: 2px; word-break: break-word;">{allergies}</div>
-                </div>
-            """)
+            memory_lines.append(f'<div style="margin-bottom: 12px;"><div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{alerts_lbl}</div><div style="color: #EF4444; font-weight: bold; font-size: 1rem; margin-top: 2px; word-break: break-word;">{allergies_trans}</div></div>')
         if conditions:
-            memory_lines.append(f"""
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{conditions_lbl}</div>
-                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{conditions}</div>
-                </div>
-            """)
+            memory_lines.append(f'<div style="margin-bottom: 12px;"><div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{conditions_lbl}</div><div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{conditions_trans}</div></div>')
         if emergency_contact:
-            memory_lines.append(f"""
-                <div style="margin-bottom: 12px;">
-                    <div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{emergency_contact_lbl}</div>
-                    <div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{emergency_contact}</div>
-                </div>
-            """)
+            memory_lines.append(f'<div style="margin-bottom: 12px;"><div style="font-weight: bold; color: var(--text-color, #475569); opacity: 0.8; font-size: 0.9rem;">{emergency_contact_lbl}</div><div style="color: var(--text-color, #0F172A); font-size: 1rem; font-weight: 500; margin-top: 2px; word-break: break-word;">{emergency_contact_trans}</div></div>')
             
-        memory_card_html = f"""
-        <div style="background-color: var(--secondary-background-color, rgba(128,128,128,0.05)); color: var(--text-color, #0F172A); padding: 18px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);">
-            <h4 style="margin-top: 0; color: var(--primary-color, #2563EB); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; border-bottom: 1px solid rgba(128, 128, 128, 0.2); padding-bottom: 8px; margin-bottom: 12px;">👤 {title_lbl}</h4>
-            <div style="font-size: 0.95rem; line-height: 1.6;">
-                {"".join(memory_lines) if memory_lines else f'<div style="color: #64748B; font-style: italic;">{get_translated_label("No profile data saved in memory.", lang_code)}</div>'}
-            </div>
-        </div>
-        """
+        if memory_lines:
+            memory_inner_html = "".join(memory_lines)
+        else:
+            no_profile_lbl = get_translated_label("No profile data saved in memory.", lang_code)
+            memory_inner_html = f'<div style="color: #64748B; font-style: italic;">{no_profile_lbl}</div>'
+
+        memory_card_html = (
+            f"<div style='background-color: var(--secondary-background-color, rgba(128,128,128,0.05)); color: var(--text-color, #0F172A); padding: 18px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2); margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>"
+            f"<h4 style='margin-top: 0; color: var(--primary-color, #2563EB); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; border-bottom: 1px solid rgba(128, 128, 128, 0.2); padding-bottom: 8px; margin-bottom: 12px;'>👤 {title_lbl}</h4>"
+            f"<div style='font-size: 0.95rem; line-height: 1.6;'>"
+            f"{memory_inner_html}"
+            f"</div>"
+            f"</div>"
+        )
         st.markdown(memory_card_html, unsafe_allow_html=True)
         
+        # 🕒 Past Request Memory Context
         past_queries = profile.get("past_emergency_summaries", [])
-        if past_queries:
-            st.markdown(f"**{trans.get('past_mem_context', lang_code)}**")
-            for q in past_queries:
-                cat_raw = q.get('category', 'General Support')
-                cat_key = "category_" + cat_raw.lower().replace(" & ", "_").replace(" ", "_")
-                cat_translated = trans.get(cat_key, lang_code)
-                st.markdown(f"- *{cat_translated}* ({trans.get('priority_label', lang_code)}: `{q.get('priority')}`): {q.get('summary')}")
+        past_mem_lbl = get_translated_label("Past Request Memory Context", lang_code)
+        
+        past_lines = []
+        for q in past_queries:
+            cat_raw = q.get('category', 'General Support')
+            cat_trans = get_translated_label(cat_raw, lang_code)
+            priority_raw = q.get('priority', 'LOW')
+            priority_trans = get_translated_label(priority_raw, lang_code)
+            summary_raw = q.get('summary', '')
+            summary_trans = get_translated_label(summary_raw, lang_code)
+            
+            p_lbl = get_translated_label("Priority Level", lang_code)
+            
+            past_lines.append(
+                f"<div style='margin-bottom: 12px; border-bottom: 1px dashed rgba(128,128,128,0.15); padding-bottom: 8px;'>"
+                f"<div style='font-weight: bold; color: var(--primary-color, #2563EB); font-size: 0.95rem;'>"
+                f"{cat_trans} (<span style='font-weight: 600;'>{p_lbl}: {priority_trans}</span>)</div>"
+                f"<div style='color: var(--text-color, #0F172A); font-size: 0.9rem; margin-top: 3px;'>{summary_trans}</div>"
+                f"</div>"
+            )
+            
+        if past_lines:
+            past_inner_html = "".join(past_lines)
+        else:
+            no_past_lbl = get_translated_label("No past requests in memory.", lang_code)
+            past_inner_html = f'<div style="color: #64748B; font-style: italic;">{no_past_lbl}</div>'
+            
+        past_card_html = (
+            f"<div style='background-color: var(--secondary-background-color, rgba(128,128,128,0.05)); color: var(--text-color, #0F172A); padding: 18px; border-radius: 12px; border: 1px solid rgba(128, 128, 128, 0.2); box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>"
+            f"<h4 style='margin-top: 0; color: var(--primary-color, #2563EB); display: flex; align-items: center; gap: 8px; font-size: 1.15rem; border-bottom: 1px solid rgba(128, 128, 128, 0.2); padding-bottom: 8px; margin-bottom: 12px;'>🕒 {past_mem_lbl}</h4>"
+            f"<div style='font-size: 0.95rem; line-height: 1.6;'>"
+            f"{past_inner_html}"
+            f"</div>"
+            f"</div>"
+        )
+        st.markdown(past_card_html, unsafe_allow_html=True)
  
     with col_response:
         res = st.session_state.result
@@ -667,11 +706,14 @@ with tab_console:
         
         # Display detected priority level dynamically inside Agent Pipeline Status
         detected_p = controller.session_memory.current_priority
-        if detected_p and detected_p != "UNKNOWN":
-            p_color = "#DC2626" if detected_p in ["CRITICAL", "HIGH"] else "#D97706"
-            priority_lbl = trans.get("priority_label", lang_code)
-            priority_val_trans = get_translated_label(detected_p, lang_code)
-            st.markdown(f"**{priority_lbl}:** <span style='color:{p_color}; font-weight:bold; font-size:1.15rem;'>{priority_val_trans}</span>", unsafe_allow_html=True)
+        if not detected_p or detected_p == "UNKNOWN":
+            detected_p = heuristic_priority(user_text)
+            controller.session_memory.current_priority = detected_p
+            
+        p_color = "#DC2626" if detected_p in ["CRITICAL", "HIGH"] else "#D97706"
+        priority_lbl = trans.get("priority_label", lang_code)
+        priority_val_trans = get_translated_label(detected_p, lang_code)
+        st.markdown(f"**{priority_lbl}:** <span style='color:{p_color}; font-weight:bold; font-size:1.15rem;'>{priority_val_trans}</span>", unsafe_allow_html=True)
             
         active_state = controller.session_memory.active_agent
         
@@ -706,7 +748,6 @@ with tab_console:
         evaluator_info = get_agent_execution_info("EvaluatorAgent", "Response safety review")
 
         def get_agent_card_html(title, status_label, icon, state, exec_info):
-            # Localize status label
             status_lbl_translated = get_translated_label(status_label, lang_code)
             
             if state == 'active':
@@ -731,38 +772,35 @@ with tab_console:
                 status_text = get_translated_label("Pending", lang_code)
                 desc_color = "#94A3B8"
                 
-            return f"""
-            <div style="background-color: {bg}; border: {border}; border-radius: 12px; padding: 14px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02); min-height: 150px; display: flex; flex-direction: column; justify-content: center; align-items: center;">
-                <div style="font-size: 1.8rem; margin-bottom: 4px;">{icon}</div>
-                <div style="font-weight: 700; font-size: 1rem; color: {color};">{title}</div>
-                <div style="margin-top: 6px; font-size: 0.8rem; font-weight: 800; color: {status_color}; text-transform: uppercase; letter-spacing: 0.8px;">
-                    {status_text}
-                </div>
-                <div style="margin-top: 8px; font-size: 0.85rem; color: {desc_color}; font-style: italic; line-height: 1.3; font-weight: 500; word-break: break-word;">
-                    {exec_info}
-                </div>
-            </div>
-            """
-            
-        col_p, col_a1, col_w, col_a2, col_e = st.columns([10, 1, 10, 1, 10])
-        with col_p:
-            st.markdown(get_agent_card_html(trans.get('planner_agent_node', lang_code), "Planning", "📝", planner_state, planner_info), unsafe_allow_html=True)
-        with col_a1:
-            st.markdown("""
-            <div style="display: flex; align-items: center; justify-content: center; height: 150px; font-size: 1.8rem; color: #94A3B8;">
-                ➡️
-            </div>
-            """, unsafe_allow_html=True)
-        with col_w:
-            st.markdown(get_agent_card_html(trans.get('worker_agent_node', lang_code), "Executing", "⚙️", worker_state, worker_info), unsafe_allow_html=True)
-        with col_a2:
-            st.markdown("""
-            <div style="display: flex; align-items: center; justify-content: center; height: 150px; font-size: 1.8rem; color: #94A3B8;">
-                ➡️
-            </div>
-            """, unsafe_allow_html=True)
-        with col_e:
-            st.markdown(get_agent_card_html(trans.get('evaluator_agent_node', lang_code), "Validating", "🛡️", evaluator_state, evaluator_info), unsafe_allow_html=True)
+            return (
+                f"<div style='flex: 1; min-width: 140px; background-color: {bg}; border: {border}; border-radius: 12px; padding: 14px; text-align: center; box-shadow: 0 4px 6px rgba(0,0,0,0.02); display: flex; flex-direction: column; justify-content: center; align-items: center; box-sizing: border-box;'>"
+                f"<div style='font-size: 1.8rem; margin-bottom: 4px;'>{icon}</div>"
+                f"<div style='font-weight: 700; font-size: 1rem; color: {color};'>{title}</div>"
+                f"<div style='margin-top: 6px; font-size: 0.8rem; font-weight: 800; color: {status_color}; text-transform: uppercase; letter-spacing: 0.8px;'>{status_text}</div>"
+                f"<div style='margin-top: 8px; font-size: 0.85rem; color: {desc_color}; font-style: italic; line-height: 1.3; font-weight: 500; word-break: break-word;'>{exec_info}</div>"
+                f"</div>"
+            )
+
+        arrow_html = (
+            f"<div style='display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: #94A3B8; padding: 0 5px; flex-shrink: 0;'>"
+            f"➡️"
+            f"</div>"
+        )
+        
+        planner_card = get_agent_card_html(trans.get('planner_agent_node', lang_code), "Planning", "📝", planner_state, planner_info)
+        worker_card = get_agent_card_html(trans.get('worker_agent_node', lang_code), "Executing", "⚙️", worker_state, worker_info)
+        evaluator_card = get_agent_card_html(trans.get('evaluator_agent_node', lang_code), "Validating", "🛡️", evaluator_state, evaluator_info)
+        
+        pipeline_html = (
+            f"<div style='display: flex; flex-direction: row; justify-content: space-between; align-items: stretch; gap: 10px; width: 100%; padding: 10px 0; overflow-x: auto; box-sizing: border-box;'>"
+            f"{planner_card}"
+            f"{arrow_html}"
+            f"{worker_card}"
+            f"{arrow_html}"
+            f"{evaluator_card}"
+            f"</div>"
+        )
+        st.markdown(pipeline_html, unsafe_allow_html=True)
 
         if not res:
             st.info(trans.get("prompt_submit_request", lang_code))
@@ -786,7 +824,13 @@ with tab_console:
         else:
             # 1. Main Actionable Advice
             st.markdown(f"### {trans.get('actionable_advice', lang_code)}")
-            st.markdown(res["response"])
+            
+            advice_text = res.get("response", "")
+            if not advice_text or "workflow failed" in advice_text.lower() or "error:" in advice_text.lower() or "exception" in advice_text.lower() or "resourceexhausted" in advice_text.lower() or "api quota exceeded" in advice_text.lower():
+                advice_val = "Unable to generate complete guidance currently. Please retry or provide more details."
+                advice_text = get_translated_label(advice_val, lang_code)
+            
+            st.markdown(advice_text)
             
             # Speech player
             if res.get("audio_path") and os.path.exists(res["audio_path"]):
@@ -807,7 +851,10 @@ with tab_console:
             category_val = res.get("category", "General Assistance")
             category_translated = get_translated_label(category_val, lang_code)
             
-            priority_val = res.get("priority", "UNKNOWN")
+            priority_val = res.get("priority", "MEDIUM")
+            if not priority_val or priority_val.strip().upper() not in ["LOW", "MEDIUM", "HIGH", "CRITICAL"]:
+                priority_val = "MEDIUM"
+            priority_val = priority_val.strip().upper()
             priority_translated = get_translated_label(priority_val, lang_code)
             p_color = "#DC2626" if priority_val in ["CRITICAL", "HIGH"] else "#D97706"
             
@@ -916,13 +963,20 @@ with tab_console:
                     </div>
                     """, unsafe_allow_html=True)
             else:
-                st.info(trans.get("no_resources", lang_code))
+                fallback_msg = get_translated_label("No verified resources found for this location. Please retry.", lang_code)
+                st.info(fallback_msg)
 
             st.markdown("---")
 
             # 4. Explainable AI panel
             st.markdown(f"### {trans.get('decision_header', lang_code)}")
-            st.markdown(res["decision_explanation"])
+            
+            explanation_text = res.get("decision_explanation", "")
+            if not explanation_text or "workflow failed" in explanation_text.lower() or "error:" in explanation_text.lower() or "exception" in explanation_text.lower() or "resourceexhausted" in explanation_text.lower() or "api quota exceeded" in explanation_text.lower():
+                explanation_val = "Response validation is temporarily unavailable. Please retry."
+                explanation_text = get_translated_label(explanation_val, lang_code)
+                
+            st.markdown(explanation_text)
 
             st.markdown("---")
 
