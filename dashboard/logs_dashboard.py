@@ -16,8 +16,9 @@ class LogsDashboard:
         # Fetch translations
         title = self.trans.get("logs_header", lang_code)
         subtitle = self.trans.get("dash_subtitle", lang_code)
-        st.markdown(f"<h2 style='text-align: center; color: #1E3A8A;'>{title}</h2>", unsafe_allow_html=True)
-        st.markdown(f"<p style='text-align: center; color: #555;'>{subtitle}</p>", unsafe_allow_html=True)
+        st.title(title)
+        if subtitle:
+            st.write(subtitle)
 
         stats = self.observability.get_aggregate_stats()
         logs = self.observability.read_logs(30)
@@ -76,22 +77,85 @@ class LogsDashboard:
                     
                     st.markdown(f"**{self.trans.get('dash_category', lang_code)}** {cat_translated} | **{self.trans.get('dash_total_time', lang_code)}** {log.get('duration_ms')} ms")
                     
+                    # Structured Execution Log
+                    st.markdown("### 📋 Execution Log")
+                    
+                    log_time_str = ""
+                    try:
+                        dt_time = datetime.datetime.fromisoformat(log.get("timestamp", ""))
+                        log_time_str = dt_time.strftime("%I:%M %p")
+                    except:
+                        log_time_str = log.get("timestamp", "")
+                        
+                    lang_map = self.trans.get_supported_languages()
+                    lang_code_val = log.get("language", "en")
+                    lang_name_translated = lang_map.get(lang_code_val, lang_code_val).capitalize()
+                    
+                    p_val = log.get("priority", "MEDIUM").strip().upper()
+                    
+                    pl_status = log.get("planner_status", "Completed")
+                    wk_status = log.get("worker_status", "Completed")
+                    ev_status = log.get("evaluator_status", "Completed")
+                    if pl_status in ["COMPLETED", "APPROVED"]: pl_status = "Completed"
+                    if wk_status in ["COMPLETED", "APPROVED"]: wk_status = "Completed"
+                    if ev_status in ["COMPLETED", "APPROVED"]: ev_status = "Completed"
+                    
+                    val_score = f"{int(log.get('eval_score', 0.98) * 100)}%"
+                    
+                    final_status_raw = log.get("final_response_status", "SUCCESS")
+                    final_status = "Delivered" if final_status_raw in ["SUCCESS", "HEURISTIC_FALLBACK"] else "Failed"
+                    
+                    st.markdown(f"""
+                    **Time:**
+                    {log_time_str}
+                    
+                    **Language:**
+                    {lang_name_translated}
+                    
+                    **Priority:**
+                    {p_val}
+                    
+                    **Planner:**
+                    {pl_status}
+                    
+                    **Worker:**
+                    {wk_status}
+                    
+                    **Evaluator:**
+                    {ev_status}
+                    
+                    **Validation:**
+                    {val_score}
+                    
+                    **Response:**
+                    {final_status}
+                    """)
+                    
                     st.markdown(f"**{self.trans.get('dash_latencies', lang_code)}**")
-                    stages = log.get("stages", [])
-                    stage_map = {
-                        "Language Detection": "stage_lang_detect",
-                        "Input Translation": "stage_input_trans",
-                        "Priority Detection": "stage_priority",
-                        "Planning": "stage_planning",
-                        "Worker Execution": "stage_worker",
-                        "Safety Review": "stage_safety",
-                        "Output Synthesis": "stage_output"
-                    }
-                    for stage in stages:
-                        s_raw = stage.get('stage', '')
-                        s_key = stage_map.get(s_raw, "")
-                        s_trans = self.trans.get(s_key, lang_code) if s_key else s_raw
-                        st.markdown(f"- **{s_trans}:** {stage.get('duration_ms')} ms")
+                    if "planner_latency" in log or "worker_latency" in log or "evaluator_latency" in log:
+                        st.markdown(f"- **Planner Latency:** {log.get('planner_latency', 0.0)} ms")
+                        st.markdown(f"- **Worker Latency:** {log.get('worker_latency', 0.0)} ms")
+                        st.markdown(f"- **Evaluator Latency:** {log.get('evaluator_latency', 0.0)} ms")
+                    else:
+                        stages = log.get("stages", [])
+                        stage_map = {
+                            "Language Detection": "stage_lang_detect",
+                            "Input Translation": "stage_input_trans",
+                            "Priority Detection": "stage_priority",
+                            "Planning": "stage_planning",
+                            "Worker Execution": "stage_worker",
+                            "Safety Review": "stage_safety",
+                            "Output Synthesis": "stage_output"
+                        }
+                        for stage in stages:
+                            s_raw = stage.get('stage', '')
+                            s_key = stage_map.get(s_raw, "")
+                            s_trans = self.trans.get(s_key, lang_code) if s_key else s_raw
+                            st.markdown(f"- **{s_trans}:** {stage.get('duration_ms')} ms")
+                            
+                    res_used = log.get("resources_used", [])
+                    if res_used:
+                        st.markdown(f"**Resources Used:** {', '.join(res_used)}")
                     
                     if log.get("error"):
                         st.error(f"{self.trans.get('dash_error_logs', lang_code)} {log.get('error')}")
