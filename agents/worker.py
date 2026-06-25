@@ -183,7 +183,7 @@ class WorkerAgent:
                 f"User Profile Info:\n"
                 f"- Name: {user_name}\n"
                 f"- Medical Alerts / Allergies: {medical_alerts if medical_alerts else 'None declared'}\n"
-                f"- Emergency Contact: {emergency_contact_name} ({emergency_contact_phone})\n"
+                f"- Emergency Contact:\n{emergency_contact_name}\n{emergency_contact_phone}\n"
                 "Please tailor the guidelines specifically if the medical alerts are critical (e.g. allergies to watch, insulin dependencies, or contacting their specific contact)."
             )
 

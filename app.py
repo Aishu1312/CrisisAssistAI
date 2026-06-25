@@ -331,7 +331,8 @@ LOCAL_TRANSLATIONS = {
         "Maharashtra": "महाराष्ट्र",
         "Nagpur, Maharashtra": "नागपुर, महाराष्ट्र",
         "India": "भारत",
-        "National": "राष्ट्रीय"
+        "National": "राष्ट्रीय",
+        "Contact": "संपर्क"
     },
     "mr": {
         "Ambulance Service": "रुग्णवाहिका सेवा",
@@ -350,7 +351,8 @@ LOCAL_TRANSLATIONS = {
         "Maharashtra": "महाराष्ट्र",
         "Nagpur, Maharashtra": "नागपूर, महाराष्ट्र",
         "India": "भारत",
-        "National": "राष्ट्रीय"
+        "National": "राष्ट्रीय",
+        "Contact": "संपर्क"
     }
 }
 
@@ -796,7 +798,7 @@ with tab_console:
             digits_only = "".join(c for c in phone_val if c.isdigit())
             if not phone_val.startswith("+") and len(digits_only) == 10:
                 phone_val = f"+91-{digits_only}"
-            emergency_contact = f"{contact_name} ({phone_val})"
+            emergency_contact = f"{contact_name}\n{phone_val}"
         elif contact_name:
             emergency_contact = contact_name
         elif contact_phone:
@@ -838,7 +840,7 @@ with tab_console:
                     digits_only = "".join(c for c in phone_formatted if c.isdigit())
                     if not phone_formatted.startswith("+") and len(digits_only) == 10:
                         phone_formatted = f"+91-{digits_only}"
-                    contact_val = f"{contact_name} ({phone_formatted})"
+                    contact_val = f"{contact_name}<br>{phone_formatted}"
                 elif contact_name:
                     contact_val = contact_name
                 else:
@@ -850,6 +852,92 @@ with tab_console:
                 mem_html += f'<div class="history-item"><div class="history-label">{emergency_contact_lbl}:</div><div class="history-value">{contact_val}</div></div>'
             mem_html += '</div>'
             st.markdown(mem_html, unsafe_allow_html=True)
+
+        # 🏥 Verified Emergency Resources Rendering
+        resources = []
+        fallback_used = False
+        res = st.session_state.result
+        if res and res.get("verified_resources"):
+            resources = res.get("verified_resources", [])
+            fallback_used = res.get("fallback_used", False)
+            
+        if not resources:
+            city_name = st.session_state.active_location.get("city", "Mumbai") if st.session_state.active_location else "Mumbai"
+            raw_fallback = controller.location_tool.get_fallback_resources(city_name)
+            resources = controller.location_tool.verify_batch(raw_fallback)
+            fallback_used = True
+            
+        resources_header_lbl = trans.get('resources_header', lang_code)
+        st.markdown(f"#### {resources_header_lbl}")
+        
+        if fallback_used:
+            fallback_msg = get_translated_label("Showing verified emergency contacts available for your region.", lang_code)
+            st.info("⚠️ " + fallback_msg)
+            
+        current_coords = st.session_state.active_location.get("coords", (19.0760, 72.8777)) if st.session_state.active_location else (19.0760, 72.8777)
+        
+        if resources:
+            res_html = '<div class="history-card">'
+            for idx, r in enumerate(resources):
+                v = r.get("verification", {})
+                v_score = int(v.get("score", 0.0) * 100)
+                r_coords = r.get("coordinates", current_coords)
+                
+                # Generate Map URL
+                map_url = maps_tool.get_maps_url(r['name'], r_coords)
+                
+                # Ensure clean phone number for tel: link
+                phone_clean = re.sub(r"[^\d+]", "", r['phone'])
+                
+                # Localize card elements
+                lbl_verification_score = get_translated_label("Verification Score", lang_code)
+                lbl_status_text = trans.get("lbl_status", lang_code)
+                lbl_status = lbl_status_text.replace(":", "").strip() if lbl_status_text else "Status"
+                lbl_contact = get_translated_label("Contact", lang_code)
+                lbl_btn_maps = get_translated_label("Open Google Maps", lang_code)
+                lbl_btn_call_now = get_translated_label("Call Now", lang_code)
+                
+                # Determine dynamic emoji
+                emoji = "🏥"
+                name_lower = r['name'].lower()
+                if "ambulance" in name_lower:
+                    emoji = "🚑"
+                elif "police" in name_lower:
+                    emoji = "🚓"
+                elif "fire" in name_lower:
+                    emoji = "🔥"
+                    
+                # Translate values
+                translated_name = get_translated_label(r['name'], lang_code)
+                translated_name = translated_name.replace("🚑", "").replace("🚓", "").replace("🔥", "").replace("🏥", "").strip()
+                translated_status = get_translated_label(r['status'], lang_code)
+
+                # Build header for this resource
+                res_html += f'<div class="history-title" style="font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">{emoji} {translated_name}</div>'
+                
+                # Verification Score
+                res_html += f'<div class="history-item"><div class="history-label">{lbl_verification_score}:</div><div class="history-value">{v_score}%</div></div>'
+                
+                # Status
+                res_html += f'<div class="history-item"><div class="history-label">{lbl_status}:</div><div class="history-value">{translated_status}</div></div>'
+                
+                # Contact
+                res_html += f'<div class="history-item"><div class="history-label">{lbl_contact}:</div><div class="history-value">{r["phone"]}</div></div>'
+                
+                # Action links
+                action_html = '<div style="margin-top: 10px; margin-bottom: 15px; display: flex; gap: 15px; flex-wrap: wrap;">'
+                action_html += f'<a href="{map_url}" target="_blank" style="text-decoration: none; color: var(--primary-color, #2563EB); font-weight: bold; display: inline-flex; align-items: center; gap: 5px; font-size: 0.95rem;">📍 {lbl_btn_maps}</a>'
+                action_html += f'<a href="tel:{phone_clean}" style="text-decoration: none; color: var(--primary-color, #2563EB); font-weight: bold; display: inline-flex; align-items: center; gap: 5px; font-size: 0.95rem;">📞 {lbl_btn_call_now}</a>'
+                action_html += '</div>'
+                res_html += action_html
+                
+                if idx < len(resources) - 1:
+                    res_html += '<div class="history-divider"></div>'
+            res_html += '</div>'
+            st.markdown(res_html, unsafe_allow_html=True)
+        else:
+            fallback_msg = get_translated_label("No verified emergency resources available for this location. Please try updating your location.", lang_code)
+            st.info(fallback_msg)
 
         # 🕒 Past Request Memory Context Rendering
         past_queries = profile.get("past_emergency_summaries", [])
@@ -1108,106 +1196,6 @@ with tab_console:
                     <div class='telemetry-value' style='color: #10B981;'>{status_val}</div>
                 </div>
                 """, unsafe_allow_html=True)
-
-            st.markdown("---")
-
-            # 3. Verified Resources List with interactive cards (clickable Google Maps and direct dialing links)
-            st.markdown(f"### {trans.get('resources_header', lang_code)}")
-            resources = res.get("verified_resources", [])
-            fallback_used = res.get("fallback_used", False)
-            
-            if not resources:
-                city_name = st.session_state.active_location.get("city", "Mumbai") if st.session_state.active_location else "Mumbai"
-                raw_fallback = controller.location_tool.get_fallback_resources(city_name)
-                resources = controller.location_tool.verify_batch(raw_fallback)
-                fallback_used = True
-                
-            if fallback_used:
-                fallback_msg = get_translated_label("Showing verified emergency contacts available for your region.", lang_code)
-                st.info("⚠️ " + fallback_msg)
-            
-            current_coords = st.session_state.active_location.get("coords", (19.0760, 72.8777))
-            
-            if resources:
-                for idx, r in enumerate(resources):
-                    v = r.get("verification", {})
-                    v_score = int(v.get("score", 0.0) * 100)
-                    r_coords = r.get("coordinates", current_coords)
-                    
-                    # Generate Map URL and Directions URL
-                    map_url = maps_tool.get_maps_url(r['name'], r_coords)
-                    directions_url = maps_tool.get_directions_url(current_coords, r_coords)
-                    
-                    # Ensure clean phone number for tel: link
-                    phone_clean = re.sub(r"[^\d+]", "", r['phone'])
-                    
-                    # Labels translated dynamically for card
-                    addr_label = trans.get("default_loc_label", lang_code)
-                    fresh_badge_text = trans.get("status_badge_fresh", lang_code)
-                    verified_badge_text = trans.get("status_badge_verified", lang_code)
-                    lbl_status_text = trans.get("lbl_status", lang_code)
-                    lbl_freshness_text = trans.get("lbl_freshness", lang_code)
-                    lbl_contact_format_text = trans.get("lbl_contact_format", lang_code)
-                    lbl_contact_text = trans.get("emergency_contact_label", lang_code).replace("Emergency ", "").strip()
-                    
-                    # Localize card elements
-                    lbl_verification_score = get_translated_label("Verification Score", lang_code)
-                    lbl_btn_maps = get_translated_label("Open Google Maps", lang_code)
-                    lbl_btn_call = get_translated_label("Call", lang_code)
-                    lbl_btn_directions = get_translated_label("View Directions", lang_code)
-                    
-                    # Determine dynamic emoji
-                    emoji = "🏥"
-                    name_lower = r['name'].lower()
-                    if "ambulance" in name_lower:
-                        emoji = "🚑"
-                    elif "police" in name_lower:
-                        emoji = "🚓"
-                    elif "fire" in name_lower:
-                        emoji = "🔥"
-                        
-                    # Translate values
-                    translated_name = get_translated_label(r['name'], lang_code)
-                    # Scrub existing emojis in name
-                    translated_name = translated_name.replace("🚑", "").replace("🚓", "").replace("🔥", "").replace("🏥", "").strip()
-                    
-                    translated_address = get_translated_label(r['address'], lang_code)
-                    translated_status = get_translated_label(r['status'], lang_code)
-
-                    st.markdown(f"#### {emoji} {idx+1}. {translated_name} ({lbl_verification_score}: {v_score}%)")
-                    st.markdown(f"**{addr_label}:** {translated_address}  \n"
-                                f"**{lbl_contact_text}:** {r['phone']}  \n"
-                                f"**{lbl_status_text}** {translated_status} | **{lbl_freshness_text}** {fresh_badge_text} | **{lbl_contact_format_text}** {verified_badge_text}")
-                    
-                    is_fallback = r.get("fallback", False)
-                    is_national = is_fallback and (r['address'] in ["India", "National", "Default Region"])
-                    
-                    if is_national:
-                        # Just a single Call Now button for generic fallback
-                        lbl_btn_call_now = get_translated_label("Call Now", lang_code)
-                        st.markdown(f"[📞 {lbl_btn_call_now}](tel:{phone_clean})")
-                    elif is_fallback:
-                        # 2 columns: Open Google Maps & Call
-                        r_col1, r_col2 = st.columns(2)
-                        with r_col1:
-                            st.markdown(f"[📍 {lbl_btn_maps}]({map_url})")
-                        with r_col2:
-                            st.markdown(f"[📞 {lbl_btn_call}](tel:{phone_clean})")
-                    else:
-                        # 3 columns: Maps, Call, Directions
-                        r_col1, r_col2, r_col3 = st.columns(3)
-                        with r_col1:
-                            st.markdown(f"[📍 {lbl_btn_maps}]({map_url})")
-                        with r_col2:
-                            st.markdown(f"[📞 {lbl_btn_call}](tel:{phone_clean})")
-                        with r_col3:
-                            st.markdown(f"[🧭 {lbl_btn_directions}]({directions_url})")
-                            
-                    if idx < len(resources) - 1:
-                        st.markdown("---")
-            else:
-                fallback_msg = get_translated_label("No verified emergency resources available for this location. Please try updating your location.", lang_code)
-                st.info(fallback_msg)
 
             st.markdown("---")
 

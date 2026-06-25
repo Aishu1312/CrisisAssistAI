@@ -40,7 +40,7 @@ class ContextEngineering:
         contact_name = (contact.get("name") or "").strip()
         contact_phone = (contact.get("phone") or "").strip()
         if contact_name and contact_phone:
-            contact_info = f"{contact_name} ({contact_phone})"
+            contact_info = f"{contact_name}\n{contact_phone}"
         elif contact_name:
             contact_info = contact_name
         elif contact_phone:
