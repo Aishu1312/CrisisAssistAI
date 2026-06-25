@@ -313,10 +313,67 @@ with st.sidebar:
 # ==================================================
 # MAIN PAGE BRANDING HERO
 # ==================================================
+LOCAL_TRANSLATIONS = {
+    "hi": {
+        "Ambulance Service": "एम्बुलेंस सेवा",
+        "Police Emergency": "पुलिस सहायता",
+        "Fire Emergency": "फायर ब्रिगेड",
+        "Medical Emergency Support": "चिकित्सा आपातकालीन सहायता",
+        "AVAILABLE": "उपलब्ध",
+        "Operational": "परिचालन",
+        "Open Google Maps": "गूगल मैप्स खोलें",
+        "Call": "कॉल करें",
+        "Call Now": "अभी कॉल करें",
+        "View Directions": "दिशा-निर्देश देखें",
+        "Verification Score": "सत्यापन स्कोर",
+        "Showing verified emergency contacts available for your region.": "आपके क्षेत्र के लिए उपलब्ध सत्यापित आपातकालीन संपर्क दिखाए जा रहे हैं।",
+        "Nagpur": "नागपुर",
+        "Maharashtra": "महाराष्ट्र",
+        "Nagpur, Maharashtra": "नागपुर, महाराष्ट्र",
+        "India": "भारत",
+        "National": "राष्ट्रीय"
+    },
+    "mr": {
+        "Ambulance Service": "रुग्णवाहिका सेवा",
+        "Police Emergency": "पोलीस मदत",
+        "Fire Emergency": "अग्निशामक दल",
+        "Medical Emergency Support": "वैद्यकीय आणीबाणी मदत",
+        "AVAILABLE": "उपलब्ध",
+        "Operational": "परिचालन",
+        "Open Google Maps": "गुगल नकाशे उघडा",
+        "Call": "कॉल करा",
+        "Call Now": "आता कॉल करा",
+        "View Directions": "दिशा-निर्देश पहा",
+        "Verification Score": "पडताळणी गुण",
+        "Showing verified emergency contacts available for your region.": "तुमच्या क्षेत्रासाठी उपलब्ध सत्यापित आपत्कालीन संपर्क दर्शवित आहे.",
+        "Nagpur": "नागपूर",
+        "Maharashtra": "महाराष्ट्र",
+        "Nagpur, Maharashtra": "नागपूर, महाराष्ट्र",
+        "India": "भारत",
+        "National": "राष्ट्रीय"
+    }
+}
+
 # Helper to translate UI labels dynamically to any of the 28 languages (uses TranslationTool and caches results)
 def get_translated_label(label_text, target_lang):
     if target_lang == "en":
         return label_text
+        
+    # Prevent double translation if the text is already in Hindi/Marathi script (Devanagari)
+    if target_lang in ["hi", "mr"] and re.search(r"[\u0900-\u097F]", label_text):
+        return label_text
+        
+    local_dict = LOCAL_TRANSLATIONS.get(target_lang, {})
+    if label_text in local_dict:
+        return local_dict[label_text]
+        
+    # Check for composite strings (e.g. "Nagpur Ambulance Service")
+    for eng_term, trans_term in local_dict.items():
+        if eng_term in label_text:
+            prefix = label_text.replace(eng_term, "").strip()
+            translated_prefix = local_dict.get(prefix, prefix)
+            return f"{translated_prefix} {trans_term}".strip()
+            
     cache_key = f"trans_lbl_{label_text}_{target_lang}"
     if cache_key not in st.session_state:
         if "controller" in st.session_state and hasattr(st.session_state.controller, "translation_tool"):
@@ -328,6 +385,7 @@ def get_translated_label(label_text, target_lang):
         else:
             st.session_state[cache_key] = label_text
     return st.session_state[cache_key]
+
 
 # Custom styling injection for responsive layout, dark theme compatibility, and premium dashboard widgets
 st.markdown("""
@@ -1049,6 +1107,11 @@ with tab_console:
             # 3. Verified Resources List with interactive cards (clickable Google Maps and direct dialing links)
             st.markdown(f"### {trans.get('resources_header', lang_code)}")
             resources = res.get("verified_resources", [])
+            fallback_used = res.get("fallback_used", False)
+            
+            if fallback_used:
+                fallback_msg = get_translated_label("Showing verified emergency contacts available for your region.", lang_code)
+                st.info("⚠️ " + fallback_msg)
             
             current_coords = st.session_state.active_location.get("coords", (19.0760, 72.8777))
             
@@ -1079,19 +1142,54 @@ with tab_console:
                     lbl_btn_maps = get_translated_label("Open Google Maps", lang_code)
                     lbl_btn_call = get_translated_label("Call", lang_code)
                     lbl_btn_directions = get_translated_label("View Directions", lang_code)
-
-                    st.markdown(f"#### 🏥 {idx+1}. {r['name']} ({lbl_verification_score}: {v_score}%)")
-                    st.markdown(f"**{addr_label}:** {r['address']}  \n"
-                                f"**{lbl_contact_text}:** {r['phone']}  \n"
-                                f"**{lbl_status_text}** {r['status']} | **{lbl_freshness_text}** {fresh_badge_text} | **{lbl_contact_format_text}** {verified_badge_text}")
                     
-                    r_col1, r_col2, r_col3 = st.columns(3)
-                    with r_col1:
-                        st.markdown(f"[📍 {lbl_btn_maps}]({map_url})")
-                    with r_col2:
-                        st.markdown(f"[📞 {lbl_btn_call}](tel:{phone_clean})")
-                    with r_col3:
-                        st.markdown(f"[🧭 {lbl_btn_directions}]({directions_url})")
+                    # Determine dynamic emoji
+                    emoji = "🏥"
+                    name_lower = r['name'].lower()
+                    if "ambulance" in name_lower:
+                        emoji = "🚑"
+                    elif "police" in name_lower:
+                        emoji = "🚓"
+                    elif "fire" in name_lower:
+                        emoji = "🔥"
+                        
+                    # Translate values
+                    translated_name = get_translated_label(r['name'], lang_code)
+                    # Scrub existing emojis in name
+                    translated_name = translated_name.replace("🚑", "").replace("🚓", "").replace("🔥", "").replace("🏥", "").strip()
+                    
+                    translated_address = get_translated_label(r['address'], lang_code)
+                    translated_status = get_translated_label(r['status'], lang_code)
+
+                    st.markdown(f"#### {emoji} {idx+1}. {translated_name} ({lbl_verification_score}: {v_score}%)")
+                    st.markdown(f"**{addr_label}:** {translated_address}  \n"
+                                f"**{lbl_contact_text}:** {r['phone']}  \n"
+                                f"**{lbl_status_text}** {translated_status} | **{lbl_freshness_text}** {fresh_badge_text} | **{lbl_contact_format_text}** {verified_badge_text}")
+                    
+                    is_fallback = r.get("fallback", False)
+                    is_national = is_fallback and (r['address'] in ["India", "National", "Default Region"])
+                    
+                    if is_national:
+                        # Just a single Call Now button for generic fallback
+                        lbl_btn_call_now = get_translated_label("Call Now", lang_code)
+                        st.markdown(f"[📞 {lbl_btn_call_now}](tel:{phone_clean})")
+                    elif is_fallback:
+                        # 2 columns: Open Google Maps & Call
+                        r_col1, r_col2 = st.columns(2)
+                        with r_col1:
+                            st.markdown(f"[📍 {lbl_btn_maps}]({map_url})")
+                        with r_col2:
+                            st.markdown(f"[📞 {lbl_btn_call}](tel:{phone_clean})")
+                    else:
+                        # 3 columns: Maps, Call, Directions
+                        r_col1, r_col2, r_col3 = st.columns(3)
+                        with r_col1:
+                            st.markdown(f"[📍 {lbl_btn_maps}]({map_url})")
+                        with r_col2:
+                            st.markdown(f"[📞 {lbl_btn_call}](tel:{phone_clean})")
+                        with r_col3:
+                            st.markdown(f"[🧭 {lbl_btn_directions}]({directions_url})")
+                            
                     if idx < len(resources) - 1:
                         st.markdown("---")
             else:

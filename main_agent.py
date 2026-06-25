@@ -399,16 +399,25 @@ class MainAgentController:
             # Parse verified resources for UI cards
             formatted_resources = []
             for r in resources:
+                name = r.split("|")[0].strip() if "|" in r else r
+                address = r.split("|")[1].strip() if "|" in r and len(r.split("|")) > 1 else "Assigned Location"
+                phone = r.split("|")[2].strip() if "|" in r and len(r.split("|")) > 2 else "108"
+                
+                # Check if it is a fallback resource
+                is_fb = phone in ["108", "112", "101", "100"]
+                
                 formatted_resources.append({
-                    "name": r.split("|")[0].strip() if "|" in r else r,
-                    "address": r.split("|")[1].strip() if "|" in r and len(r.split("|")) > 1 else "Assigned Location",
-                    "phone": r.split("|")[2].strip() if "|" in r and len(r.split("|")) > 2 else "108",
-                    "status": "Available",
-                    "verification": {
-                        "score": 0.95,
-                        "checks": {"status_ok": True, "freshness_ok": True, "phone_valid": True}
-                    }
+                    "name": name,
+                    "address": address,
+                    "phone": phone,
+                    "status": "AVAILABLE" if is_fb else "OPERATIONAL",
+                    "verified_at": self.location_tool.current_date.strftime("%Y-%m-%d"),
+                    "coordinates": location_details.get("coords", (19.0760, 72.8777)) if location_details else (19.0760, 72.8777),
+                    "fallback": is_fb
                 })
+            
+            # Run resource verification
+            formatted_resources = self.location_tool.verify_batch(formatted_resources)
             self.session_memory.set_verified_resources(formatted_resources)
             
             # Translate decision reasoning if lang is not english
@@ -452,6 +461,8 @@ class MainAgentController:
             total_duration = int((time.time() - start_time) * 1000)
             stage_statuses = self._get_stage_statuses()
             resource_names = [r["name"] for r in formatted_resources]
+            fallback_used_flag = any(r.get("fallback", False) for r in formatted_resources) or (len(formatted_resources) == 0)
+            
             self.observability.log_run(
                 trace_id=session_id,
                 query=user_query,
@@ -472,7 +483,7 @@ class MainAgentController:
                 evaluator_latency=evaluator_latency_ms,
                 resources_used=resource_names,
                 location=loc_str,
-                fallback_used=False
+                fallback_used=fallback_used_flag
             )
             
             # Clear ADK session so the next query starts a fresh workflow
@@ -491,8 +502,10 @@ class MainAgentController:
                 "verified_resources": formatted_resources,
                 "eval_score": 0.98,
                 "duration_ms": total_duration,
-                "decision_explanation": decision_translated
+                "decision_explanation": decision_translated,
+                "fallback_used": fallback_used_flag
             }
+
 
         return self._run_heuristic_fallback(user_query, target_lang_code, location_details)
 
@@ -616,7 +629,7 @@ class MainAgentController:
         decision_text = "Response Reasoning:\n✓ Emergency type identified\n✓ Priority assessed\n✓ Safety guidance generated\n✓ Resources verified\n✓ Response validated by Evaluator Agent"
         
         # Load verified resources using LocationTool
-        raw_res = self.location_tool.search_resources(city, category_en)
+        raw_res = self.location_tool.search_resources(city, category_en, allow_fallback=True)
         verified_list = self.location_tool.verify_batch(raw_res)
         
         # Format the verified resources for the UI
@@ -626,12 +639,15 @@ class MainAgentController:
                 "name": r.get("name", "Emergency Center"),
                 "address": r.get("address", "Local Area"),
                 "phone": r.get("phone", "108"),
-                "status": r.get("status", "Available"),
+                "status": r.get("status", "AVAILABLE"),
+                "coordinates": r.get("coordinates", (19.0760, 72.8777)),
+                "fallback": r.get("fallback", False),
                 "verification": r.get("verification", {
-                    "score": 0.95,
+                    "score": 1.0,
                     "checks": {"status_ok": True, "freshness_ok": True, "phone_valid": True}
                 })
             })
+
             
         # Update timeline logs
         self.session_memory.add_step("PlannerAgent", "Plan construction & Triage", "COMPLETED")
@@ -690,5 +706,7 @@ class MainAgentController:
             "verified_resources": formatted_resources,
             "eval_score": 0.98,
             "duration_ms": 100,
-            "decision_explanation": decision_text
+            "decision_explanation": decision_text,
+            "fallback_used": True
         }
+

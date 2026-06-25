@@ -1,5 +1,6 @@
 import json
 import re
+import os
 from google import genai
 from core.a2a_protocol import AgentMessage
 from core.context_engineering import ContextEngineering
@@ -39,7 +40,7 @@ class WorkerAgent:
             coords = self.location_tool.geocode(detected_city)
 
         # Step 1: Resource searches
-        raw_resources = self.location_tool.search_resources(detected_city, category)
+        raw_resources = self.location_tool.search_resources(detected_city, category, allow_fallback=False)
         
         # If the city is not hardcoded, dynamically generate realistic emergency resources using Gemini
         if not raw_resources and self.client:
@@ -76,6 +77,9 @@ class WorkerAgent:
                     raw_resources = parsed
             except Exception as e:
                 print(f"Dynamic resource generation failed: {e}. Falling back to default list.")
+        
+        if not raw_resources:
+            raw_resources = self.location_tool.search_resources(detected_city, category, allow_fallback=True)
         
         # Step 2: Query simulated MCP server for alerts & capacities
         mcp_alerts = []
