@@ -105,12 +105,18 @@ class LogsDashboard:
                     final_status_raw = log.get("final_response_status", "SUCCESS")
                     final_status = "Delivered" if final_status_raw in ["SUCCESS", "HEURISTIC_FALLBACK"] else "Failed"
                     
+                    location_val = log.get("location", "N/A")
+                    fallback_used_val = "Yes" if log.get("fallback_used", False) else "No"
+                    
                     st.markdown(f"""
                     **Time:**
                     {log_time_str}
                     
                     **Language:**
                     {lang_name_translated}
+                    
+                    **Location:**
+                    {location_val}
                     
                     **Priority:**
                     {p_val}
@@ -126,6 +132,9 @@ class LogsDashboard:
                     
                     **Validation:**
                     {val_score}
+                    
+                    **Fallback Used:**
+                    {fallback_used_val}
                     
                     **Response:**
                     {final_status}

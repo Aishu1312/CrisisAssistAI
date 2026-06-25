@@ -32,13 +32,16 @@ class Observability:
         planner_latency: float = 0.0,
         worker_latency: float = 0.0,
         evaluator_latency: float = 0.0,
-        resources_used: List[str] = None
+        resources_used: List[str] = None,
+        location: str = "",
+        fallback_used: bool = False
     ):
         record = {
             "timestamp": datetime.datetime.now().isoformat(),
             "trace_id": trace_id,
             "query": query,
             "language": language,
+            "location": location,
             "priority": priority,
             "category": category,
             "duration_ms": duration_ms,
@@ -46,6 +49,7 @@ class Observability:
             "worker_latency": worker_latency,
             "evaluator_latency": evaluator_latency,
             "resources_used": resources_used or [],
+            "fallback_used": fallback_used,
             "latencies": [stage.get("duration_ms", 0) for stage in stages],
             "stages": stages,
             "eval_score": eval_score,
