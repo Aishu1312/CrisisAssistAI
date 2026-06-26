@@ -2,6 +2,7 @@ import os
 import time
 import uuid
 import sys
+import streamlit as st
 import asyncio
 import re
 import datetime
@@ -95,29 +96,43 @@ class MainAgentController:
             })
         return stages
 
-    def process_emergency_request(
-        self, 
-        user_query: str, 
-        target_lang_code: str = "en", 
-        location_details: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
-        """
-        Coordinates the emergency response pipeline by running the ADK 2.0 Workflow.
-        """
-        # Resolve active event loop or run synchronously
-        try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-            
-        if loop and loop.is_running():
+   def process_emergency_request(
+    self,
+    user_query: str,
+    target_lang_code: str = "en",
+    location_details: Dict[str, Any] = None,
+) -> Dict[str, Any]:
+    """
+    Entry point for Streamlit.
+    Executes the async workflow safely whether an event loop
+    already exists or not.
+    """
+
+    try:
+        loop = asyncio.get_running_loop()
+
+        if loop.is_running():
             import nest_asyncio
             nest_asyncio.apply()
-            
-        return asyncio.run(self._async_process_emergency_request(
-            user_query, target_lang_code, location_details
-        ))
+            return loop.run_until_complete(
+                self._async_process_emergency_request(
+                    user_query,
+                    target_lang_code,
+                    location_details,
+                )
+            )
 
+    except RuntimeError:
+        pass
+
+    return asyncio.run(
+        self._async_process_emergency_request(
+            user_query,
+            target_lang_code,
+            location_details,
+        )
+    )
+    
     async def _async_process_emergency_request(
         self,
         user_query: str,
@@ -138,7 +153,6 @@ class MainAgentController:
                 loc_str = state
         
         # In Streamlit, st.session_state is available on the thread
-        import streamlit as st
         
         session_id = st.session_state.get("adk_session_id")
         resume_input = st.session_state.get("dispatch_response")
@@ -667,7 +681,6 @@ class MainAgentController:
         self.user_memory.add_past_request(user_query, priority, category_en, summary_short)
         self.user_memory.save_to_disk()
         
-        import streamlit as st
         st.session_state.clear_adk_session = True
         stage_statuses = self._get_stage_statuses()
         resource_names = [r["name"] for r in formatted_resources]
