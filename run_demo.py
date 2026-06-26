@@ -28,7 +28,7 @@ def run_demo():
     controller.user_memory.update_profile({
         "name": "Arjun Mehta",
         "preferred_language": "Hindi",
-        "home_location": "Mumbai, Maharashtra",
+        "home_location": "Mumbai",
         "medical_alerts": "Severe Asthma, Penicillin Allergy",
         "emergency_contact": {
             "name": "Deepa Mehta (Wife)",
