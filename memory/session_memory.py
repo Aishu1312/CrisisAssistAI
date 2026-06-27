@@ -13,6 +13,7 @@ class SessionMemory:
         self.detected_category: str = "UNKNOWN"
         self.last_decision_explanation: str = ""
         self.verified_resources: List[Dict[str, Any]] = []
+        self.past_emergencies: List[Dict[str, Any]] = []
         self.session_start_time = datetime.datetime.now()
         # Current active agent: "none", "planning", "executing", "validating"
         self.active_agent: str = "none"
@@ -58,6 +59,14 @@ class SessionMemory:
         self.detected_category = category
         self.last_decision_explanation = explanation
 
+    def add_past_emergency(self, category: str, priority: str, city: str):
+        self.past_emergencies.append({
+            "category": category,
+            "priority": priority,
+            "city": city,
+            "timestamp": datetime.datetime.now().isoformat()
+        })
+
     def set_verified_resources(self, resources: List[Dict[str, Any]]):
         self.verified_resources = resources
 
@@ -76,3 +85,6 @@ class SessionMemory:
 
     def get_history(self) -> List[Dict[str, Any]]:
         return self.conversation_history
+
+    def get_past_emergencies(self) -> List[Dict[str, Any]]:
+        return self.past_emergencies

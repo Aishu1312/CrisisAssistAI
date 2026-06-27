@@ -177,126 +177,6 @@ with st.sidebar:
     # Load localized labels
     labels = trans.get_labels(lang_code)
 
-    st.markdown(f"### ⚙️ {trans.get('pref_header', lang_code)}")
-    
-    # Read user profile memory
-    profile = controller.user_memory.get_profile()
-    
-    # Initialize session state keys for reactive updates
-    if "profile_name" not in st.session_state:
-        st.session_state.profile_name = profile.get("name", "")
-    if "profile_location" not in st.session_state:
-        st.session_state.profile_location = profile.get("location", "")
-        
-    if "profile_allergies" not in st.session_state:
-        allergies_list = profile.get("allergies", [])
-        if isinstance(allergies_list, list):
-            st.session_state.profile_allergies = ", ".join(allergies_list) if allergies_list else ""
-        else:
-            st.session_state.profile_allergies = str(allergies_list)
-            
-    if "profile_conditions" not in st.session_state:
-        conditions_list = profile.get("medical_conditions", [])
-        if isinstance(conditions_list, list):
-            st.session_state.profile_conditions = ", ".join(conditions_list) if conditions_list else ""
-        else:
-            st.session_state.profile_conditions = str(conditions_list)
-            
-    if "profile_contact_name" not in st.session_state:
-        st.session_state.profile_contact_name = profile.get("emergency_contact", {}).get("name", "")
-    if "profile_contact_phone" not in st.session_state:
-        st.session_state.profile_contact_phone = profile.get("emergency_contact", {}).get("phone", "")
-        
-    def on_profile_change():
-        raw_name = st.session_state.get("profile_name", "")
-        raw_loc = st.session_state.get("profile_location", "")
-        raw_allergies = st.session_state.get("profile_allergies", "")
-        raw_conditions = st.session_state.get("profile_conditions", "")
-        raw_contact_name = st.session_state.get("profile_contact_name", "")
-        raw_contact_phone = st.session_state.get("profile_contact_phone", "")
-        
-        parsed_allergies = [a.strip() for a in raw_allergies.split(",") if a.strip()]
-        parsed_conditions = [c.strip() for c in raw_conditions.split(",") if c.strip()]
-        
-        # Immediate location update and geocoding
-        if raw_loc.strip():
-            st.session_state.active_location = detector.parse_manual_location(raw_loc)
-        else:
-            st.session_state.active_location = detector.detect_from_ip()
-            
-        controller.user_memory.update_profile({
-            "name": raw_name,
-            "location": raw_loc,
-            "allergies": parsed_allergies,
-            "medical_alerts": raw_allergies,
-            "medical_conditions": parsed_conditions,
-            "contact_name": raw_contact_name,
-            "contact_phone": raw_contact_phone,
-            "emergency_contact": {
-                "name": raw_contact_name,
-                "phone": raw_contact_phone
-            }
-        })
-        st.toast(trans.get("status_completed", lang_code))
-
-    user_name = st.text_input(
-        trans.get("name_label", lang_code), 
-        placeholder=trans.get("placeholder_name", lang_code), 
-        key="profile_name", 
-        on_change=on_profile_change
-    )
-    
-    home_loc = st.text_input(
-        trans.get("default_loc_label", lang_code), 
-        placeholder=trans.get("placeholder_location", lang_code), 
-        key="profile_location", 
-        on_change=on_profile_change
-    )
-    
-    medical_alerts = st.text_area(
-        trans.get("medical_alerts_label", lang_code), 
-        placeholder=trans.get("placeholder_allergies", lang_code), 
-        key="profile_allergies", 
-        on_change=on_profile_change
-    )
-    
-    conditions_label = trans.get("medical_conditions_label", lang_code)
-    if conditions_label == "medical_conditions_label":
-        conditions_label = "Medical Conditions"
-    medical_conditions_input = st.text_area(
-        conditions_label, 
-        placeholder=trans.get("placeholder_conditions", lang_code), 
-        key="profile_conditions", 
-        on_change=on_profile_change
-    )
-    
-    st.markdown(f"**{trans.get('contact_name_label', lang_code)} / Contact:**")
-    contact_name = st.text_input(
-        trans.get("contact_name_label", lang_code), 
-        placeholder=trans.get("placeholder_contact_name", lang_code), 
-        key="profile_contact_name", 
-        on_change=on_profile_change
-    )
-    contact_phone = st.text_input(
-        trans.get("contact_phone_label", lang_code), 
-        placeholder=trans.get("placeholder_contact_phone", lang_code), 
-        key="profile_contact_phone", 
-        on_change=on_profile_change
-    )
-    
-    # Save profile parameters with stacked buttons: Save Profile and Update Profile
-    btn_save_lbl = "💾 " + trans.get("btn_save_profile", lang_code)
-    btn_update_lbl = trans.get("btn_update_profile", lang_code)
-    
-    if st.button(btn_save_lbl, use_container_width=True):
-        on_profile_change()
-        st.success("✅ " + trans.get("status_completed", lang_code))
-        
-    if st.button(btn_update_lbl, use_container_width=True):
-        on_profile_change()
-        st.toast(trans.get("status_completed", lang_code))
-        time.sleep(0.5)
-        st.rerun()
         
     # API Status Check
     api_loaded = controller.api_key is not None
@@ -664,6 +544,129 @@ with tab_console:
     
     with col_input:
         st.subheader(trans.get("input_header", lang_code))
+        st.markdown(f"### ⚙️ {trans.get('pref_header', lang_code)}")
+    
+        # Read user profile memory
+        profile = controller.user_memory.get_profile()
+    
+        # Initialize session state keys for reactive updates
+        if "profile_name" not in st.session_state:
+            st.session_state.profile_name = profile.get("name", "")
+        if "profile_location" not in st.session_state:
+            st.session_state.profile_location = profile.get("location", "")
+        
+        if "profile_allergies" not in st.session_state:
+            allergies_list = profile.get("allergies", [])
+            if isinstance(allergies_list, list):
+                st.session_state.profile_allergies = ", ".join(allergies_list) if allergies_list else ""
+            else:
+                st.session_state.profile_allergies = str(allergies_list)
+            
+        if "profile_conditions" not in st.session_state:
+            conditions_list = profile.get("medical_conditions", [])
+            if isinstance(conditions_list, list):
+                st.session_state.profile_conditions = ", ".join(conditions_list) if conditions_list else ""
+            else:
+                st.session_state.profile_conditions = str(conditions_list)
+            
+        if "profile_contact_name" not in st.session_state:
+            st.session_state.profile_contact_name = profile.get("emergency_contact", {}).get("name", "")
+        if "profile_contact_phone" not in st.session_state:
+            st.session_state.profile_contact_phone = profile.get("emergency_contact", {}).get("phone", "")
+        
+        def on_profile_change():
+            raw_name = st.session_state.get("profile_name", "")
+            raw_loc = st.session_state.get("profile_location", "")
+            raw_allergies = st.session_state.get("profile_allergies", "")
+            raw_conditions = st.session_state.get("profile_conditions", "")
+            raw_contact_name = st.session_state.get("profile_contact_name", "")
+            raw_contact_phone = st.session_state.get("profile_contact_phone", "")
+        
+            parsed_allergies = [a.strip() for a in raw_allergies.split(",") if a.strip()]
+            parsed_conditions = [c.strip() for c in raw_conditions.split(",") if c.strip()]
+        
+            # Immediate location update and geocoding
+            if raw_loc.strip():
+                st.session_state.active_location = detector.parse_manual_location(raw_loc)
+            else:
+                st.session_state.active_location = detector.detect_from_ip()
+            
+            controller.user_memory.update_profile({
+                "name": raw_name,
+                "location": raw_loc,
+                "allergies": parsed_allergies,
+                "medical_alerts": raw_allergies,
+                "medical_conditions": parsed_conditions,
+                "contact_name": raw_contact_name,
+                "contact_phone": raw_contact_phone,
+                "emergency_contact": {
+                    "name": raw_contact_name,
+                    "phone": raw_contact_phone
+                }
+            })
+            st.toast(trans.get("status_completed", lang_code))
+
+        user_name = st.text_input(
+            trans.get("name_label", lang_code), 
+            placeholder=trans.get("placeholder_name", lang_code), 
+            key="profile_name", 
+            on_change=on_profile_change
+        )
+    
+        home_loc = st.text_input(
+            trans.get("default_loc_label", lang_code), 
+            placeholder=trans.get("placeholder_location", lang_code), 
+            key="profile_location", 
+            on_change=on_profile_change
+        )
+    
+        medical_alerts = st.text_area(
+            trans.get("medical_alerts_label", lang_code), 
+            placeholder=trans.get("placeholder_allergies", lang_code), 
+            key="profile_allergies", 
+            on_change=on_profile_change
+        )
+    
+        conditions_label = trans.get("medical_conditions_label", lang_code)
+        if conditions_label == "medical_conditions_label":
+            conditions_label = "Medical Conditions"
+        medical_conditions_input = st.text_area(
+            conditions_label, 
+            placeholder=trans.get("placeholder_conditions", lang_code), 
+            key="profile_conditions", 
+            on_change=on_profile_change
+        )
+    
+        st.markdown(f"**{trans.get('contact_name_label', lang_code)} / Contact:**")
+        contact_name = st.text_input(
+            trans.get("contact_name_label", lang_code), 
+            placeholder=trans.get("placeholder_contact_name", lang_code), 
+            key="profile_contact_name", 
+            on_change=on_profile_change
+        )
+        contact_phone = st.text_input(
+            trans.get("contact_phone_label", lang_code), 
+            placeholder=trans.get("placeholder_contact_phone", lang_code), 
+            key="profile_contact_phone", 
+            on_change=on_profile_change
+        )
+    
+        # Save profile parameters with stacked buttons: Save Profile and Update Profile
+        btn_save_lbl = "💾 " + trans.get("btn_save_profile", lang_code)
+        btn_update_lbl = trans.get("btn_update_profile", lang_code)
+    
+        if st.button(btn_save_lbl, use_container_width=True):
+            on_profile_change()
+            st.success("✅ " + trans.get("status_completed", lang_code))
+        
+        if st.button(btn_update_lbl, use_container_width=True):
+            on_profile_change()
+            st.toast(trans.get("status_completed", lang_code))
+            time.sleep(0.5)
+            st.rerun()
+
+
+    st.markdown('---')
         
         # Audio voice recording widgets
         audio_file = None
@@ -715,6 +718,12 @@ with tab_console:
                             location_details=st.session_state.active_location
                         )
                         st.session_state.result = result
+                        if result:
+                            controller.session_memory.add_past_emergency(
+                                category=result.get("category", "Unknown"),
+                                priority=result.get("priority", "MEDIUM"),
+                                city=result.get("detected_city", "Unknown")
+                            )
                     except Exception as e:
                         internal_error = str(e)
                         print(f"Internal log: unable to process emergency request: {internal_error}")
@@ -768,112 +777,77 @@ with tab_console:
                             "fallback_used": True,
                             "decision_explanation": "Response Reasoning:\n✓ Emergency type identified\n✓ Priority assessed\n✓ Safety guidance generated\n✓ Resources verified\n✓ Response validated by Evaluator Agent"
                         }
+                        controller.session_memory.add_past_emergency(
+                            category=st.session_state.result.get("category", "Unknown"),
+                            priority=st.session_state.result.get("priority", "MEDIUM"),
+                            city=st.session_state.result.get("detected_city", "Unknown")
+                        )
         
 
 
  
     with col_response:
         res = st.session_state.result
-
-        profile_data = controller.user_memory.get_profile()
-        name = profile_data.get("name", "").strip()
-        location = profile_data.get("location", "").strip()
         
-        allergies = profile_data.get("medical_alerts", "").strip()
-        if not allergies:
-            allergies_list = profile_data.get("allergies", [])
-            if isinstance(allergies_list, list):
-                allergies = ", ".join(allergies_list)
+        if res:
+            profile_data = controller.user_memory.get_profile()
+            name = profile_data.get("name", "").strip() or "Unknown"
+            location = profile_data.get("location", "").strip() or "Unknown"
+            
+            allergies = profile_data.get("medical_alerts", "").strip()
+            if not allergies:
+                allergies_list = profile_data.get("allergies", [])
+                if isinstance(allergies_list, list):
+                    allergies = ", ".join(allergies_list)
+                else:
+                    allergies = str(allergies_list)
+            allergies = allergies.strip() or "None"
+            
+            conditions_list = profile_data.get("medical_conditions", [])
+            if isinstance(conditions_list, list):
+                conditions = ", ".join(conditions_list) if conditions_list else ""
             else:
-                allergies = str(allergies_list)
-        allergies = allergies.strip()
-        
-        conditions_list = profile_data.get("medical_conditions", [])
-        if isinstance(conditions_list, list):
-            conditions = ", ".join(conditions_list) if conditions_list else ""
-        else:
-            conditions = str(conditions_list)
-        conditions = conditions.strip()
-        
-        contact_name = profile_data.get("contact_name", "").strip() or profile_data.get("emergency_contact", {}).get("name", "").strip()
-        contact_phone = profile_data.get("contact_phone", "").strip() or profile_data.get("emergency_contact", {}).get("phone", "").strip()
-        
-        emergency_contact = ""
-        if contact_name and contact_phone:
-            phone_val = contact_phone
-            digits_only = "".join(c for c in phone_val if c.isdigit())
-            if not phone_val.startswith("+") and len(digits_only) == 10:
-                phone_val = f"+91-{digits_only}"
-            emergency_contact = f"{contact_name}\n{phone_val}"
-        elif contact_name:
-            emergency_contact = contact_name
-        elif contact_phone:
-            phone_val = contact_phone
-            digits_only = "".join(c for c in phone_val if c.isdigit())
-            if not phone_val.startswith("+") and len(digits_only) == 10:
-                phone_val = f"+91-{digits_only}"
-            emergency_contact = phone_val
-
-        title_lbl = get_translated_label("Current User Memory", lang_code)
-        name_lbl = trans.get("name_label", lang_code)
-        alerts_lbl = trans.get("medical_alerts_label", lang_code)
-        conditions_lbl = trans.get("medical_conditions_label", lang_code)
-        if conditions_lbl == "medical_conditions_label": conditions_lbl = "Medical Conditions"
-        default_loc_lbl = trans.get("default_loc_label", lang_code)
-        if default_loc_lbl == "default_loc_label": default_loc_lbl = "Default Location"
-        emergency_contact_lbl = trans.get("emergency_contact_label", lang_code).replace(":", "").strip()
-        if emergency_contact_lbl == "emergency_contact_label": emergency_contact_lbl = "Emergency Contact"
-
-        # 👤 Current User Memory Card Rendering
-        if not any([name, location, allergies, conditions, contact_name, contact_phone]):
-            no_profile_lbl = get_translated_label("No profile data saved in memory.", lang_code)
-            st.info(no_profile_lbl)
-        else:
+                conditions = str(conditions_list)
+            conditions = conditions.strip() or "None"
+            
+            contact_name = profile_data.get("contact_name", "").strip() or profile_data.get("emergency_contact", {}).get("name", "").strip()
+            contact_phone = profile_data.get("contact_phone", "").strip() or profile_data.get("emergency_contact", {}).get("phone", "").strip()
+            
+            emergency_contact = "None"
+            if contact_name and contact_phone:
+                emergency_contact = f"{contact_name} {contact_phone}"
+            elif contact_name:
+                emergency_contact = contact_name
+            elif contact_phone:
+                emergency_contact = contact_phone
+                
+            title_lbl = get_translated_label("Current User Memory", lang_code)
+            
             st.markdown(f"#### 👤 {title_lbl}")
             mem_html = '<div class="history-card">'
-            if name:
-                mem_html += f'<div class="history-item"><div class="history-label">{name_lbl}:</div><div class="history-value">{name}</div></div>'
-            if location:
-                mem_html += f'<div class="history-item"><div class="history-label">{default_loc_lbl}:</div><div class="history-value">{location}</div></div>'
-            if allergies:
-                mem_html += f'<div class="history-item"><div class="history-label">{alerts_lbl}:</div><div class="history-value">{allergies}</div></div>'
-            if conditions:
-                mem_html += f'<div class="history-item"><div class="history-label">{conditions_lbl}:</div><div class="history-value">{conditions}</div></div>'
-            if contact_name or contact_phone:
-                contact_val = ""
-                if contact_name and contact_phone:
-                    phone_formatted = contact_phone
-                    digits_only = "".join(c for c in phone_formatted if c.isdigit())
-                    if not phone_formatted.startswith("+") and len(digits_only) == 10:
-                        phone_formatted = f"+91-{digits_only}"
-                    contact_val = f"{contact_name}<br>{phone_formatted}"
-                elif contact_name:
-                    contact_val = contact_name
-                else:
-                    phone_formatted = contact_phone
-                    digits_only = "".join(c for c in phone_formatted if c.isdigit())
-                    if not phone_formatted.startswith("+") and len(digits_only) == 10:
-                        phone_formatted = f"+91-{digits_only}"
-                    contact_val = phone_formatted
-                mem_html += f'<div class="history-item"><div class="history-label">{emergency_contact_lbl}:</div><div class="history-value">{contact_val}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Name:</div><div class="history-value">{name}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Default Location:</div><div class="history-value">{location}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Medical Alerts / Allergies:</div><div class="history-value">{allergies}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Medical Conditions:</div><div class="history-value">{conditions}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Emergency Contact:</div><div class="history-value">{emergency_contact}</div></div>'
             mem_html += '</div>'
             st.markdown(mem_html, unsafe_allow_html=True)
-
-        # 🕒 Past Request Memory Context
-        past_history = controller.session_memory.get_history()
-        if past_history:
-            st.markdown(f"#### 🕒 Past Request Memory Context")
-            past_html = '<div class="history-container">'
-            for entry in reversed(past_history[-5:]): # Show last 5
-                role_icon = "👤" if entry["role"] == "user" else "🤖"
-                txt = entry.get("content", "")
-                
-                past_html += f'<div class="history-card" style="padding: 10px; margin-bottom: 8px;">'
-                past_html += f'<div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px; color:#3B82F6;">{role_icon} {entry["role"].capitalize()}</div>'
-                past_html += f'<div style="font-size:0.85rem; color:#1F2937;">{txt}</div>'
+            
+            past_emergencies = controller.session_memory.get_past_emergencies()
+            if past_emergencies:
+                st.markdown(f"#### 🕒 Past Request Memory Context")
+                past_html = '<div class="history-container">'
+                for entry in reversed(past_emergencies[-5:]):
+                    cat = entry.get("category", "General Support")
+                    pri = entry.get("priority", "MEDIUM")
+                    cit = entry.get("city", "Unknown")
+                    
+                    past_html += f'<div class="history-card" style="padding: 10px; margin-bottom: 8px;">'
+                    past_html += f'<div style="font-size:0.95rem; font-weight:bold; margin-bottom:4px; color:#1F2937;">{cat} (Priority Level: {pri})</div>'
+                    past_html += f'<div style="font-size:0.85rem; color:#64748B;">Emergency resolved in {cit}.</div>'
+                    past_html += '</div>'
                 past_html += '</div>'
-            past_html += '</div>'
-            st.markdown(past_html, unsafe_allow_html=True)
+                st.markdown(past_html, unsafe_allow_html=True)
 
         
         # Real-time Agent workflow nodes visualization
