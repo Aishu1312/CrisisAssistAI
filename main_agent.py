@@ -96,42 +96,42 @@ class MainAgentController:
             })
         return stages
 
-   def process_emergency_request(
-    self,
-    user_query: str,
-    target_lang_code: str = "en",
-    location_details: Dict[str, Any] = None,
-) -> Dict[str, Any]:
-    """
-    Entry point for Streamlit.
-    Executes the async workflow safely whether an event loop
-    already exists or not.
-    """
+    def process_emergency_request(
+        self,
+        user_query: str,
+        target_lang_code: str = "en",
+        location_details: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        """
+        Entry point for Streamlit.
+        Executes the async workflow safely whether an event loop
+        already exists or not.
+        """
 
-    try:
-        loop = asyncio.get_running_loop()
+        try:
+            loop = asyncio.get_running_loop()
 
-        if loop.is_running():
-            import nest_asyncio
-            nest_asyncio.apply()
-            return loop.run_until_complete(
-                self._async_process_emergency_request(
-                    user_query,
-                    target_lang_code,
-                    location_details,
+            if loop.is_running():
+                import nest_asyncio
+                nest_asyncio.apply()
+                return loop.run_until_complete(
+                    self._async_process_emergency_request(
+                        user_query,
+                        target_lang_code,
+                        location_details,
+                    )
                 )
+
+        except RuntimeError:
+            pass
+
+        return asyncio.run(
+            self._async_process_emergency_request(
+                user_query,
+                target_lang_code,
+                location_details,
             )
-
-    except RuntimeError:
-        pass
-
-    return asyncio.run(
-        self._async_process_emergency_request(
-            user_query,
-            target_lang_code,
-            location_details,
         )
-    )
     
     async def _async_process_emergency_request(
         self,
