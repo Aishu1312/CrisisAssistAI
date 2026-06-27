@@ -15,15 +15,21 @@ class PlannerAgent:
             "CRITICAL": [
                 r"\btrapped\b", r"\bburning\b", r"\bbleeding\b", r"\bheart attack\b", 
                 r"\bchoking\b", r"\bdrowning\b", r"\bcant breathe\b", r"\bcan't breathe\b",
-                r"\bbachao\b", r"\bmar gaya\b", r"\bkoil nahi hai\b", r"\bvaachva\b"
+                r"\bbachao\b", r"\bmar gaya\b", r"\bkoil nahi hai\b", r"\bvaachva\b",
+                r"\bcollapse\b", r"\bsnake bite\b", r"\bpoison\b", r"\bsuicide\b",
+                r"\bkidnap\b", r"\brape\b", r"\bkill\b", r"\bweapon\b", r"\bgun\b"
             ],
             "HIGH": [
                 r"\bfire\b", r"\baag\b", r"\binjured\b", r"\baccident\b", r"\bstorm\b", 
-                r"\bflood\b", r"\bbhukamp\b", r"\bearthquake\b", r"\bchot\b", r"\bdanger\b"
+                r"\bflood\b", r"\bbhukamp\b", r"\bearthquake\b", r"\bchot\b", r"\bdanger\b",
+                r"\bmissing\b", r"\bassault\b", r"\brobbery\b", r"\bcyclone\b",
+                r"\bharass\b", r"\bstalk\b", r"\bboys\b", r"\bfollow\b", r"\bchase\b", 
+                r"\beve teasing\b", r"\bthreat\b"
             ],
             "MEDIUM": [
                 r"\bclinic\b", r"\bpharmacy\b", r"\bmedicine\b", r"\bpower cut\b", 
-                r"\bdawa\b", r"\bpower outage\b", r"\bwater logging\b", r"\broad block\b"
+                r"\bdawa\b", r"\bpower outage\b", r"\bwater logging\b", r"\broad block\b",
+                r"\bheat stroke\b", r"\bdehydrated\b", r"\bstray dog\b"
             ]
         }
 
@@ -98,13 +104,19 @@ class PlannerAgent:
         # 2. Planning Steps and Category
         category = "General Support"
         if any(w in query_lower for w in ["hospital", "medical", "blood", "doctor", "injured", "bimar", "chot", "pain"]):
-            category = "Medical"
+            category = "Medical Emergency"
         elif any(w in query_lower for w in ["fire", "smoke", "burning", "aag", "explosion"]):
-            category = "Fire"
-        elif any(w in query_lower for w in ["flood", "rain", "storm", "earthquake", "cyclone", "bhukamp", "tsunami"]):
+            category = "Fire Hazard"
+        elif any(w in query_lower for w in ["flood", "rain", "earthquake", "bhukamp", "storm", "cyclone"]):
             category = "Natural Disaster"
+        elif any(w in query_lower for w in ["accident", "crash"]):
+            category = "Road Accident"
         elif any(w in query_lower for w in ["trapped", "rescue", "drowning", "stuck", "bachao", "save"]):
             category = "Search & Rescue"
+        elif any(w in query_lower for w in ["harass", "stalk", "boys", "follow", "chase", "kidnap", "rape", "threat", "eve teasing", "assault"]):
+            category = "Personal Safety / Harassment"
+        elif any(w in query_lower for w in ["missing", "lost"]):
+            category = "Missing Person"
 
         steps = [
             f"Geocode user location for {query}",
@@ -122,8 +134,9 @@ class PlannerAgent:
                     "with keys: 'category', 'rationale', and 'steps'.\n"
                     "CRITICAL REQUIREMENTS:\n"
                     "1. The JSON keys ('category', 'rationale', 'steps') must be in English.\n"
-                    "2. The value of 'category' must be in English and must be exactly one of: 'Medical', 'Fire', 'Natural Disaster', 'Search & Rescue', or 'General Support'. Do not translate this value.\n"
-                    f"3. The values of 'rationale' and 'steps' must be written entirely in the {lang_name} language. Do not output in English.\n\n"
+                    "2. The value of 'category' must be in English and must be exactly one of: 'Medical Emergency', 'Fire Hazard', 'Natural Disaster', 'Search & Rescue', 'Personal Safety / Harassment', 'Road Accident', 'Missing Person', 'General Support'. Do not translate this value.\n"
+                    "3. The value of 'rationale' MUST BE A HIGHLY DETAILED EXPLANATION of exactly WHY this emergency type was chosen, WHY the specific priority level was assigned, and WHY specific resources/tools are needed. Be thorough for Explainable AI purposes.\n"
+                    f"4. The values of 'rationale' and 'steps' MUST be written entirely in the {lang_name} language. Do not output in English.\n\n"
                     f"User Query: '{query}'\n"
                     f"Classified Priority: {priority_tier}"
                 )

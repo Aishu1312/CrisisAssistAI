@@ -769,6 +769,12 @@ with tab_console:
                             "decision_explanation": "Response Reasoning:\n✓ Emergency type identified\n✓ Priority assessed\n✓ Safety guidance generated\n✓ Resources verified\n✓ Response validated by Evaluator Agent"
                         }
         
+
+
+ 
+    with col_response:
+        res = st.session_state.result
+
         profile_data = controller.user_memory.get_profile()
         name = profile_data.get("name", "").strip()
         location = profile_data.get("location", "").strip()
@@ -853,159 +859,22 @@ with tab_console:
             mem_html += '</div>'
             st.markdown(mem_html, unsafe_allow_html=True)
 
-        # 🏥 Verified Emergency Resources Rendering
-        resources = []
-        fallback_used = False
-        res = st.session_state.result
-        if res and res.get("verified_resources"):
-            resources = res.get("verified_resources", [])
-            fallback_used = res.get("fallback_used", False)
-            
-        if not resources:
-            city_name = st.session_state.active_location.get("city", "Mumbai") if st.session_state.active_location else "Mumbai"
-            raw_fallback = controller.location_tool.get_fallback_resources(city_name)
-            resources = controller.location_tool.verify_batch(raw_fallback)
-            fallback_used = True
-            
-        resources_header_lbl = trans.get('resources_header', lang_code)
-        st.markdown(f"#### {resources_header_lbl}")
-        
-        if fallback_used:
-            fallback_msg = get_translated_label("Showing verified emergency contacts available for your region.", lang_code)
-            st.info("⚠️ " + fallback_msg)
-            
-        current_coords = st.session_state.active_location.get("coords", (19.0760, 72.8777)) if st.session_state.active_location else (19.0760, 72.8777)
-        
-        if resources:
-            res_html = '<div class="history-card">'
-            for idx, r in enumerate(resources):
-                v = r.get("verification", {})
-                v_score = int(v.get("score", 0.0) * 100)
-                r_coords = r.get("coordinates", current_coords)
+        # 🕒 Past Request Memory Context
+        past_history = controller.session_memory.get_full_history()
+        if past_history:
+            st.markdown(f"#### 🕒 Past Request Memory Context")
+            past_html = '<div class="history-container">'
+            for entry in reversed(past_history[-5:]): # Show last 5
+                role_icon = "👤" if entry["role"] == "user" else "🤖"
+                txt = entry.get("content", "")
                 
-                # Generate Map URL
-                map_url = maps_tool.get_maps_url(r['name'], r_coords)
-                
-                # Ensure clean phone number for tel: link
-                phone_clean = re.sub(r"[^\d+]", "", r['phone'])
-                
-                # Localize card elements
-                lbl_verification_score = get_translated_label("Verification Score", lang_code)
-                lbl_status_text = trans.get("lbl_status", lang_code)
-                lbl_status = lbl_status_text.replace(":", "").strip() if lbl_status_text else "Status"
-                lbl_contact = get_translated_label("Contact", lang_code)
-                lbl_btn_maps = get_translated_label("Open Google Maps", lang_code)
-                lbl_btn_call_now = get_translated_label("Call Now", lang_code)
-                
-                # Determine dynamic emoji
-                emoji = "🏥"
-                name_lower = r['name'].lower()
-                if "ambulance" in name_lower:
-                    emoji = "🚑"
-                elif "police" in name_lower:
-                    emoji = "🚓"
-                elif "fire" in name_lower:
-                    emoji = "🔥"
-                    
-                # Translate values
-                translated_name = get_translated_label(r['name'], lang_code)
-                translated_name = translated_name.replace("🚑", "").replace("🚓", "").replace("🔥", "").replace("🏥", "").strip()
-                translated_status = get_translated_label(r['status'], lang_code)
+                past_html += f'<div class="history-card" style="padding: 10px; margin-bottom: 8px;">'
+                past_html += f'<div style="font-size:0.9rem; font-weight:bold; margin-bottom:4px; color:#3B82F6;">{role_icon} {entry["role"].capitalize()}</div>'
+                past_html += f'<div style="font-size:0.85rem; color:#1F2937;">{txt}</div>'
+                past_html += '</div>'
+            past_html += '</div>'
+            st.markdown(past_html, unsafe_allow_html=True)
 
-                # Build header for this resource
-                res_html += f'<div class="history-title" style="font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">{emoji} {translated_name}</div>'
-                
-                # Verification Score
-                res_html += f'<div class="history-item"><div class="history-label">{lbl_verification_score}:</div><div class="history-value">{v_score}%</div></div>'
-                
-                # Status
-                res_html += f'<div class="history-item"><div class="history-label">{lbl_status}:</div><div class="history-value">{translated_status}</div></div>'
-                
-                # Contact
-                res_html += f'<div class="history-item"><div class="history-label">{lbl_contact}:</div><div class="history-value">{r["phone"]}</div></div>'
-                
-                # Action links
-                action_html = '<div style="margin-top: 10px; margin-bottom: 15px; display: flex; gap: 15px; flex-wrap: wrap;">'
-                action_html += f'<a href="{map_url}" target="_blank" style="text-decoration: none; color: var(--primary-color, #2563EB); font-weight: bold; display: inline-flex; align-items: center; gap: 5px; font-size: 0.95rem;">📍 {lbl_btn_maps}</a>'
-                action_html += f'<a href="tel:{phone_clean}" style="text-decoration: none; color: var(--primary-color, #2563EB); font-weight: bold; display: inline-flex; align-items: center; gap: 5px; font-size: 0.95rem;">📞 {lbl_btn_call_now}</a>'
-                action_html += '</div>'
-                res_html += action_html
-                
-                if idx < len(resources) - 1:
-                    res_html += '<div class="history-divider"></div>'
-            res_html += '</div>'
-            st.markdown(res_html, unsafe_allow_html=True)
-        else:
-            fallback_msg = get_translated_label("No verified emergency resources available for this location. Please try updating your location.", lang_code)
-            st.info(fallback_msg)
-
-        # 🕒 Past Request Memory Context Rendering
-        past_queries = profile.get("past_emergency_summaries", [])
-        past_mem_lbl = get_translated_label("Past Request Memory Context", lang_code)
-        st.markdown(f"#### 🕒 {past_mem_lbl}")
-
-        if past_queries:
-            category_emojis = {
-                "Medical Emergency": "🩺",
-                "Fire Hazard": "🔥",
-                "Natural Disaster": "🌪️",
-                "Search & Rescue": "🔍",
-                "General Support": "🤝",
-                "General Assistance": "🤝"
-            }
-            history_html = '<div class="history-container">'
-            for idx, q in enumerate(past_queries):
-                category_value = q.get('category', 'General Support')
-                priority_value = q.get('priority', 'LOW')
-                summary_value = q.get('summary', '')
-                
-                location_value = "Unknown"
-                if "Location:" in summary_value:
-                    location_value = summary_value.split("Location:", 1)[1].split("\n", 1)[0].strip()
-                elif " in " in summary_value:
-                    location_value = summary_value.split(" in ", 1)[1].strip()
-                elif "location_details" in st.session_state and st.session_state.location_details:
-                    location_value = st.session_state.location_details.get("city", "Nagpur")
-                else:
-                    location_value = location or "Nagpur"
-                
-                location_value = location_value.replace("(Offline Mode)", "").replace(".", "").strip()
-                status_value = "Emergency resolved" if "resolved" in summary_value.lower() else "Status unavailable"
-
-                priority_translated = get_translated_label(priority_value, lang_code)
-                category_translated = get_translated_label(category_value, lang_code)
-                location_translated = get_translated_label(location_value, lang_code)
-                status_translated = get_translated_label(status_value, lang_code)
-
-                emoji = category_emojis.get(category_value, "🤝")
-
-                history_html += f"""
-                <div class="history-card">
-                    <div class="history-title">{emoji} {category_translated}</div>
-                    <div class="history-item">
-                        <div class="history-label">{get_translated_label("Priority", lang_code)}:</div>
-                        <div class="history-value">{priority_translated}</div>
-                    </div>
-                    <div class="history-item">
-                        <div class="history-label">{get_translated_label("Location", lang_code)}:</div>
-                        <div class="history-value">{location_translated}</div>
-                    </div>
-                    <div class="history-item">
-                        <div class="history-label">{get_translated_label("Status", lang_code)}:</div>
-                        <div class="history-value">{status_translated}</div>
-                    </div>
-                </div>
-                """
-                if idx < len(past_queries) - 1:
-                    history_html += '<div class="history-divider"></div>'
-            history_html += '</div>'
-            st.markdown(history_html, unsafe_allow_html=True)
-        else:
-            no_past_lbl = get_translated_label("No past requests in memory.", lang_code)
-            st.info(no_past_lbl)
- 
-    with col_response:
-        res = st.session_state.result
         
         # Real-time Agent workflow nodes visualization
         st.markdown(f"### {trans.get('agent_pipeline_status', lang_code)}")
@@ -1199,6 +1068,7 @@ with tab_console:
 
             st.markdown("---")
 
+
             # 4. Explainable AI panel
             st.markdown(f"### {trans.get('decision_header', lang_code)}")
             
@@ -1219,7 +1089,94 @@ with tab_console:
             )
             st.markdown(explanation_text)
 
+            rationale_text = res.get("rationale", "Emergency workflow processed safely.") if res else "Awaiting processing..."
+            st.markdown(f"**Explanation:** {rationale_text}")
+
+
             st.markdown("---")
+
+            # 🏥 Verified Emergency Resources Rendering
+            resources = []
+            fallback_used = False
+            res = st.session_state.result
+            if res and res.get("verified_resources"):
+                resources = res.get("verified_resources", [])
+                fallback_used = res.get("fallback_used", False)
+            
+            if not resources:
+                city_name = st.session_state.active_location.get("city", "Mumbai") if st.session_state.active_location else "Mumbai"
+                raw_fallback = controller.location_tool.get_fallback_resources(city_name)
+                resources = controller.location_tool.verify_batch(raw_fallback)
+                fallback_used = True
+            
+            resources_header_lbl = trans.get('resources_header', lang_code)
+            st.markdown(f"#### {resources_header_lbl}")
+        
+            if fallback_used:
+                fallback_msg = get_translated_label("Showing verified emergency contacts available for your region.", lang_code)
+                st.info("⚠️ " + fallback_msg)
+            
+            current_coords = st.session_state.active_location.get("coords", (19.0760, 72.8777)) if st.session_state.active_location else (19.0760, 72.8777)
+        
+            if resources:
+                res_html = '<div class="history-card">'
+                for idx, r in enumerate(resources):
+                    v = r.get("verification", {})
+                    v_score = int(v.get("score", 0.0) * 100)
+                    r_coords = r.get("coordinates", current_coords)
+                
+                    # Generate Map URL
+                    map_url = maps_tool.get_maps_url(r['name'], r_coords)
+                
+                    # Ensure clean phone number for tel: link
+                    phone_clean = re.sub(r"[^\d+]", "", r['phone'])
+                
+                    # Localize card elements
+                    lbl_verification_score = get_translated_label("Verification Score", lang_code)
+                    lbl_status_text = trans.get("lbl_status", lang_code)
+                    lbl_status = lbl_status_text.replace(":", "").strip() if lbl_status_text else "Status"
+                    lbl_contact = get_translated_label("Contact", lang_code)
+                    lbl_btn_maps = get_translated_label("Open Google Maps", lang_code)
+                    lbl_btn_call_now = get_translated_label("Call Now", lang_code)
+                
+                    # Determine dynamic emoji
+                    emoji = "🏥"
+                    name_lower = r['name'].lower()
+                    if "ambulance" in name_lower:
+                        emoji = "🚑"
+                    elif "police" in name_lower:
+                        emoji = "🚓"
+                    elif "fire" in name_lower:
+                        emoji = "🔥"
+                    
+                    # Translate values
+                    translated_name = get_translated_label(r['name'], lang_code)
+                    translated_name = translated_name.replace("🚑", "").replace("🚓", "").replace("🔥", "").replace("🏥", "").strip()
+                    translated_status = get_translated_label(r['status'], lang_code)
+
+                    # Build header for this resource
+                    res_html += f'<div class="history-title" style="font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">{emoji} {translated_name}</div>'
+                
+                    # Verification Score
+                    res_html += f'<div class="history-item"><div class="history-label">{lbl_verification_score}:</div><div class="history-value">{v_score}%</div></div>'
+                
+                    # Status
+                    res_html += f'<div class="history-item"><div class="history-label">{lbl_status}:</div><div class="history-value">{translated_status}</div></div>'
+                
+                    # Contact
+                    res_html += f'<div class="history-item"><div class="history-label">{lbl_contact}:</div><div class="history-value">{r["phone"]}</div></div>'
+                
+                    # Action links
+                    action_html = '<div style="margin-top: 10px; margin-bottom: 15px; display: flex; gap: 15px; flex-wrap: wrap;">'
+                    action_html += f'<a href="{map_url}" target="_blank" style="text-decoration: none; color: var(--primary-color, #2563EB); font-weight: bold; display: inline-flex; align-items: center; gap: 5px; font-size: 0.95rem;">📍 {lbl_btn_maps}</a>'
+                    action_html += f'<a href="tel:{phone_clean}" style="text-decoration: none; color: var(--primary-color, #2563EB); font-weight: bold; display: inline-flex; align-items: center; gap: 5px; font-size: 0.95rem;">📞 {lbl_btn_call_now}</a>'
+                    action_html += '</div>'
+                    res_html += action_html
+                
+                    if idx < len(resources) - 1:
+                        res_html += '<div class="history-divider"></div>'
+                res_html += '</div>'
+                st.markdown(res_html, unsafe_allow_html=True)
 
             # 5. Timeline execution logs
             st.markdown(f"### {trans.get('timeline_header', lang_code)}")
@@ -1249,9 +1206,15 @@ with tab_console:
                 
             st.markdown(f"**{status_header}:** {status_val}", unsafe_allow_html=True)
 
+
+            # 7. Agent Observability & Telemetry
+            st.markdown(f"### 🕵️‍♂️ Agent Observability & Telemetry")
+            dashboard = LogsDashboard()
+            dashboard.render(lang_code)
+
+
 # ==================================================
 # TELEMETRY LOGS DASHBOARD TAB
 # ==================================================
 with tab_dashboard:
-    dashboard = LogsDashboard()
-    dashboard.render(lang_code)
+    st.info("Agent Observability & Telemetry has been moved to the main dashboard for submission readiness.")

@@ -47,15 +47,7 @@ class VoiceTool:
             return filepath
         except Exception as e:
             print(f"TTS conversion failed for lang {lang} ({gtts_lang}): {e}")
-            # Fallback to English TTS if the specific language fails
-            try:
-                tts = gTTS(text=clean_text, lang="en", slow=False)
-                filename = f"tts_{hash(clean_text) & 0xffffffff}_en_fallback.mp3"
-                filepath = os.path.join(self.temp_dir, filename)
-                tts.save(filepath)
-                return filepath
-            except Exception:
-                return None
+            return None
 
     def speech_to_text(self, audio_file_path: str) -> Optional[str]:
         """

@@ -44,6 +44,11 @@ class EvaluatorAgent:
             if unverified_count > 0:
                 score -= (0.05 * unverified_count)
                 feedback_points.append(f"Recommended {unverified_count} unverified resources. Check status.")
+            
+            missing_links = sum(1 for r in resources if "coordinates" not in r or not r.get("phone"))
+            if missing_links > 0:
+                score -= (0.1 * missing_links)
+                feedback_points.append(f"Found {missing_links} resources without valid maps coordinates or phone contact.")
 
         # 3. Conciseness and checklist check:
         if not worker_payload.get("summary_checklist"):

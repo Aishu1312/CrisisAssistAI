@@ -27,6 +27,8 @@ class WorkerAgent:
         priority = plan_payload.get("priority", "LOW")
         lang_code = plan_payload.get("language", "en")
         lang_name = plan_payload.get("language_name", "English")
+        rationale = plan_payload.get("rationale", "")
+        priority_score = plan_payload.get("priority_score", 0.9)
         
         # Determine the user's location (manual profile or dynamic)
         detected_city = plan_payload.get("detected_city")
@@ -46,7 +48,7 @@ class WorkerAgent:
         if not raw_resources and self.client:
             try:
                 prompt = (
-                    f"Generate 2 to 3 real or highly realistic emergency resources (such as hospitals, fire stations, or shelters) "
+                    f"Generate 2 to 3 real or highly realistic emergency resources appropriate for a '{category}' emergency "
                     f"in the city of '{detected_city}'.\n"
                     f"For each resource, construct a JSON list of objects with keys:\n"
                     f"- 'name': name of the facility\n"
@@ -198,7 +200,7 @@ class WorkerAgent:
                 prompt = (
                     f"Create emergency safety guidelines for a {category} emergency.\n"
                     f"User Situation: '{query}'\n\n"
-                    f"CRITICAL: You must write the entire guidelines completely in the {lang_name} language. Do not output in English. Make the response action-oriented."
+                    f"CRITICAL: You must output ONLY in the {lang_name} language. Do NOT output in English or any other language. Do NOT provide dual-language output like Hindi and English together. Just output pure {lang_name}. Make the response action-oriented."
                 )
                 response = safe_generate_content(
                     self.client,
@@ -221,7 +223,7 @@ class WorkerAgent:
                 prompt = (
                     f"Summarize the following emergency guidelines into a checklist of "
                     f"exactly 3 to 5 clear, actionable, short steps. Use Markdown bullet points (-).\n"
-                    f"CRITICAL: You must write the checklist completely in the {lang_name} language. Do not output in English.\n\n"
+                    f"CRITICAL: You must output ONLY in the {lang_name} language. Do NOT output in English or any other language. Do NOT provide dual-language output like Hindi and English together. Just output pure {lang_name}.\n\n"
                     f"Guidelines:\n{selected_guide}"
                 )
                 response = safe_generate_content(
@@ -242,6 +244,8 @@ class WorkerAgent:
         response_payload = {
             "query": query,
             "priority": priority,
+            "priority_score": priority_score,
+            "rationale": rationale,
             "category": category,
             "detected_city": detected_city,
             "coordinates": coords,

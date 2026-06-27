@@ -147,27 +147,38 @@ class LocationTool:
             cat_lower = category.lower()
             resources = []
             
-            if "medical" in cat_lower or "injured" in cat_lower or "hospital" in cat_lower:
+            # Map specific needs
+            if any(k in cat_lower for k in ['medical', 'hospital', 'injury', 'accident', 'poisoning', 'health', 'snake', 'heat stroke']):
                 resources.extend(city_data["hospitals"])
-            elif "fire" in cat_lower or "explosion" in cat_lower:
+            elif any(k in cat_lower for k in ['fire', 'burning', 'smoke', 'explosion']):
                 resources.extend(city_data["fire_stations"])
                 resources.extend(city_data["hospitals"])
-            elif "safety" in cat_lower or "rescue" in cat_lower or "police" in cat_lower:
+            elif any(k in cat_lower for k in ['rescue', 'trapped', 'collapse', 'missing', 'water rescue']):
                 resources.extend(city_data["police_stations"])
+                resources.extend(city_data["fire_stations"])
+                resources.extend(city_data["hospitals"])
+            elif any(k in cat_lower for k in ['flood', 'earthquake', 'disaster', 'cyclone', 'storm']):
                 resources.extend(city_data["shelters"])
+                resources.extend(city_data["police_stations"])
+                resources.extend(city_data["hospitals"])
+            elif any(k in cat_lower for k in ['safety', 'police', 'women', 'child', 'crime', 'animal attack', 'mental health', 'power outage', 'gas leak', 'harassment', 'stalk', 'threat', 'eve teasing', 'harass']):
+                resources.extend(city_data["police_stations"])
+                if any(k in cat_lower for k in ['gas leak', 'animal attack']):
+                    resources.extend(city_data["fire_stations"])
             else:
+                # General support
                 resources.extend(city_data["shelters"])
                 resources.extend(city_data["hospitals"])
                 
             return resources
             
         if allow_fallback:
-            return self.get_fallback_resources(location_name)
+            return self.get_fallback_resources(location_name, category)
             
         return []
 
-    def get_fallback_resources(self, location_name: str) -> List[Dict[str, Any]]:
-        """Generates fallback verified emergency resources based on location or region."""
+    def get_fallback_resources(self, location_name: str, category: str = "General") -> List[Dict[str, Any]]:
+        """Generates fallback verified emergency resources based on location and category."""
         loc_clean = location_name.strip() if location_name else ""
         if not loc_clean:
             loc_clean = "India"
@@ -178,8 +189,12 @@ class LocationTool:
         # Geocode to get coordinates
         coords = self.geocode(loc_clean)
         
-        return [
-            {
+        cat_lower = category.lower()
+        all_fallbacks = []
+        
+        # Medical
+        if any(k in cat_lower for k in ['medical', 'injury', 'accident', 'health', 'general', 'poisoning', 'snake', 'heat stroke']):
+            all_fallbacks.append({
                 "name": f"{city_title} Ambulance Service",
                 "address": loc_clean,
                 "phone": "108",
@@ -188,8 +203,37 @@ class LocationTool:
                 "distance_km": 1.0,
                 "coordinates": coords,
                 "fallback": True
-            },
-            {
+            })
+            
+        # Women's Safety Helpline (Specific priority for women)
+        if any(k in cat_lower for k in ['women', 'safety', 'harass', 'harassment', 'stalk', 'threat', 'eve teasing']):
+            all_fallbacks.append({
+                "name": f"Women's Helpline {city_title}",
+                "address": loc_clean,
+                "phone": "1091",
+                "status": "AVAILABLE",
+                "verified_at": self.current_date.strftime("%Y-%m-%d"),
+                "distance_km": 1.0,
+                "coordinates": coords,
+                "fallback": True
+            })
+
+        # Child Safety Helpline
+        if any(k in cat_lower for k in ['child', 'safety', 'harass', 'harassment', 'missing']):
+            all_fallbacks.append({
+                "name": f"Child Helpline {city_title}",
+                "address": loc_clean,
+                "phone": "1098",
+                "status": "AVAILABLE",
+                "verified_at": self.current_date.strftime("%Y-%m-%d"),
+                "distance_km": 1.0,
+                "coordinates": coords,
+                "fallback": True
+            })
+            
+        # Police / Safety
+        if any(k in cat_lower for k in ['police', 'safety', 'crime', 'rescue', 'trapped', 'women', 'child', 'general', 'animal attack', 'missing', 'harass', 'harassment', 'stalk', 'threat', 'eve teasing']):
+            all_fallbacks.append({
                 "name": f"{city_title} Police Emergency",
                 "address": loc_clean,
                 "phone": "112",
@@ -198,8 +242,11 @@ class LocationTool:
                 "distance_km": 1.0,
                 "coordinates": coords,
                 "fallback": True
-            },
-            {
+            })
+            
+        # Fire
+        if any(k in cat_lower for k in ['fire', 'smoke', 'explosion', 'rescue', 'trapped', 'general', 'gas leak']):
+            all_fallbacks.append({
                 "name": f"{city_title} Fire Emergency",
                 "address": loc_clean,
                 "phone": "101",
@@ -208,19 +255,35 @@ class LocationTool:
                 "distance_km": 1.0,
                 "coordinates": coords,
                 "fallback": True
-            },
-            {
-                "name": f"{city_title} Medical Emergency Support",
+            })
+            
+        # Disaster / Shelter
+        if any(k in cat_lower for k in ['flood', 'earthquake', 'disaster', 'cyclone', 'storm']):
+            all_fallbacks.append({
+                "name": f"{city_title} Disaster Relief / SDRF",
                 "address": loc_clean,
-                "phone": "108",
+                "phone": "1070",
+                "status": "AVAILABLE",
+                "verified_at": self.current_date.strftime("%Y-%m-%d"),
+                "distance_km": 2.0,
+                "coordinates": coords,
+                "fallback": True
+            })
+            
+        if not all_fallbacks:
+            # Absolute fallback
+            all_fallbacks.append({
+                "name": f"{city_title} Emergency Helpline",
+                "address": loc_clean,
+                "phone": "112",
                 "status": "AVAILABLE",
                 "verified_at": self.current_date.strftime("%Y-%m-%d"),
                 "distance_km": 1.0,
                 "coordinates": coords,
                 "fallback": True
-            }
-        ]
-
+            })
+            
+        return all_fallbacks
 
     def verify_resource(self, resource: Dict[str, Any]) -> Dict[str, Any]:
         """Runs quality scoring on a resource's details."""
