@@ -860,7 +860,7 @@ with tab_console:
             st.markdown(mem_html, unsafe_allow_html=True)
 
         # 🕒 Past Request Memory Context
-        past_history = controller.session_memory.get_full_history()
+        past_history = controller.session_memory.get_history()
         if past_history:
             st.markdown(f"#### 🕒 Past Request Memory Context")
             past_html = '<div class="history-container">'
