@@ -666,7 +666,7 @@ with tab_console:
             st.rerun()
 
 
-    st.markdown('---')
+        st.markdown('---')
         
         # Audio voice recording widgets
         audio_file = None
