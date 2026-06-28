@@ -162,17 +162,6 @@ with st.sidebar:
     st.caption(trans.get("tagline", lang_code))
     st.markdown("---")
 
-    selected_lang_name = st.selectbox(
-        f"🌐 {trans.get('lang_selector', lang_code)}",
-        list(lang_map.values()),
-        index=list(lang_map.values()).index(lang_map[lang_code])
-    )
-    
-    # Retrieve lang code and update state
-    new_lang_code = [k for k, v in lang_map.items() if v == selected_lang_name][0]
-    if new_lang_code != lang_code:
-        st.session_state.lang_code = new_lang_code
-        st.rerun()
         
 
         
@@ -543,6 +532,18 @@ with tab_console:
     with col_input:
         st.subheader(trans.get("input_header", lang_code))
 
+
+        selected_lang_name = st.selectbox(
+            f"🌐 {trans.get('lang_selector', lang_code)}",
+            list(lang_map.values()),
+            index=list(lang_map.values()).index(lang_map[lang_code])
+        )
+    
+        # Retrieve lang code and update state
+        new_lang_code = [k for k, v in lang_map.items() if v == selected_lang_name][0]
+        if new_lang_code != lang_code:
+            st.session_state.lang_code = new_lang_code
+            st.rerun()
 
         st.markdown('---')
         # Load localized labels
