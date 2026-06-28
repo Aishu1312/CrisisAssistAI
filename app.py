@@ -812,7 +812,7 @@ with tab_console:
 
             emergency_contact = "None"
             if contact_name and contact_phone:
-                emergency_contact = f"{contact_name} {contact_phone}"
+                emergency_contact = f"{contact_name}<br>{contact_phone}"
             elif contact_name:
                 emergency_contact = contact_name
             elif contact_phone:
