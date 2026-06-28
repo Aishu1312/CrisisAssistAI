@@ -512,7 +512,7 @@ location_str = f"{st.session_state.active_location['city']}, {st.session_state.a
 status_html = f"""
 <div style='background-color: #EEF2F6; color: #1F2937; padding: 12px 20px; border-radius: 8px; margin-bottom: 25px; display: flex; justify-content: space-around; font-weight: bold; border: 1px solid #D1D5DB;'>
     <span>{loc_status_text} <code style='color: #1E3A8A; font-size: 1rem;'>{location_str}</code></span>
-    <span>{lang_status_text} <code style='color: #1E3A8A; font-size: 1rem;'>{selected_lang_name}</code></span>
+    <span>{lang_status_text} <code style='color: #1E3A8A; font-size: 1rem;'>{lang_map[lang_code]}</code></span>
 </div>
 """
 st.markdown(status_html, unsafe_allow_html=True)
