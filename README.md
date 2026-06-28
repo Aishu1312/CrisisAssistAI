@@ -18,7 +18,7 @@ CrisisAssist AI solves this problem by using a robust **Multi-Agent Architecture
 
 The system utilizes an Agent-to-Agent (A2A) protocol where specialized agents communicate to complete the emergency response lifecycle. The architecture prevents hallucinations in critical scenarios by using a tripartite review system.
 
-![Agent Pipeline Screenshot](./assets/traditional_vs_crisisassist.png)
+![Agent Pipeline Screenshot](./assets/architecture.png)
 
 ## 4. Planner Agent
 
