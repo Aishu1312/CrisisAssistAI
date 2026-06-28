@@ -785,6 +785,70 @@ with tab_console:
 
 
  
+        if res is not None:
+            # 6. Current User Memory
+            profile_data = controller.user_memory.get_profile()
+            name = profile_data.get("name", "").strip() or "Unknown"
+            location = profile_data.get("location", "").strip() or "Unknown"
+
+            allergies = profile_data.get("medical_alerts", "").strip()
+            if not allergies:
+                allergies_list = profile_data.get("allergies", [])
+                if isinstance(allergies_list, list):
+                    allergies = ", ".join(allergies_list)
+                else:
+                    allergies = str(allergies_list)
+            allergies = allergies.strip() or "None"
+
+            conditions_list = profile_data.get("medical_conditions", [])
+            if isinstance(conditions_list, list):
+                conditions = ", ".join(conditions_list) if conditions_list else ""
+            else:
+                conditions = str(conditions_list)
+            conditions = conditions.strip() or "None"
+
+            contact_name = profile_data.get("contact_name", "").strip() or profile_data.get("emergency_contact", {}).get("name", "").strip()
+            contact_phone = profile_data.get("contact_phone", "").strip() or profile_data.get("emergency_contact", {}).get("phone", "").strip()
+
+            emergency_contact = "None"
+            if contact_name and contact_phone:
+                emergency_contact = f"{contact_name} {contact_phone}"
+            elif contact_name:
+                emergency_contact = contact_name
+            elif contact_phone:
+                emergency_contact = contact_phone
+
+            title_lbl = get_translated_label("Current User Memory", lang_code)
+
+            st.markdown(f"#### 👤 {title_lbl}")
+            mem_html = '<div class="history-card">'
+            mem_html += f'<div class="history-item"><div class="history-label">Name:</div><div class="history-value">{name}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Default Location:</div><div class="history-value">{location}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Medical Alerts / Allergies:</div><div class="history-value">{allergies}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Medical Conditions:</div><div class="history-value">{conditions}</div></div>'
+            mem_html += f'<div class="history-item"><div class="history-label">Emergency Contact:</div><div class="history-value">{emergency_contact}</div></div>'
+            mem_html += '</div>'
+            st.markdown(mem_html, unsafe_allow_html=True)
+
+            # 7. Past Request Memory Context
+            past_emergencies = controller.session_memory.get_past_emergencies()
+            if past_emergencies:
+                st.markdown(f"#### 🕒 Past Request Memory Context")
+                past_html = '<div class="history-container">'
+                for entry in reversed(past_emergencies[-5:]):
+                    cat = entry.get("category", "General Support")
+                    pri = entry.get("priority", "MEDIUM")
+                    cit = entry.get("city", "Unknown")
+
+                    past_html += f'<div class="history-card" style="padding: 10px; margin-bottom: 8px;">'
+                    past_html += f'<div style="font-size:0.95rem; font-weight:bold; margin-bottom:4px; color:#1F2937;">{cat} (Priority Level: {pri})</div>'
+                    past_html += f'<div style="font-size:0.85rem; color:#64748B;">Emergency resolved in {cit}.</div>'
+                    past_html += '</div>'
+                past_html += '</div>'
+                st.markdown(past_html, unsafe_allow_html=True)
+
+
+
     with col_response:
         res = st.session_state.result
         
@@ -1119,68 +1183,6 @@ with tab_console:
                 
             st.markdown(f"**{status_header}:** {status_val}", unsafe_allow_html=True)
 
-
-            if res is not None:
-                # 6. Current User Memory
-                profile_data = controller.user_memory.get_profile()
-                name = profile_data.get("name", "").strip() or "Unknown"
-                location = profile_data.get("location", "").strip() or "Unknown"
-            
-                allergies = profile_data.get("medical_alerts", "").strip()
-                if not allergies:
-                    allergies_list = profile_data.get("allergies", [])
-                    if isinstance(allergies_list, list):
-                        allergies = ", ".join(allergies_list)
-                    else:
-                        allergies = str(allergies_list)
-                allergies = allergies.strip() or "None"
-            
-                conditions_list = profile_data.get("medical_conditions", [])
-                if isinstance(conditions_list, list):
-                    conditions = ", ".join(conditions_list) if conditions_list else ""
-                else:
-                    conditions = str(conditions_list)
-                conditions = conditions.strip() or "None"
-            
-                contact_name = profile_data.get("contact_name", "").strip() or profile_data.get("emergency_contact", {}).get("name", "").strip()
-                contact_phone = profile_data.get("contact_phone", "").strip() or profile_data.get("emergency_contact", {}).get("phone", "").strip()
-            
-                emergency_contact = "None"
-                if contact_name and contact_phone:
-                    emergency_contact = f"{contact_name} {contact_phone}"
-                elif contact_name:
-                    emergency_contact = contact_name
-                elif contact_phone:
-                    emergency_contact = contact_phone
-                
-                title_lbl = get_translated_label("Current User Memory", lang_code)
-            
-                st.markdown(f"#### 👤 {title_lbl}")
-                mem_html = '<div class="history-card">'
-                mem_html += f'<div class="history-item"><div class="history-label">Name:</div><div class="history-value">{name}</div></div>'
-                mem_html += f'<div class="history-item"><div class="history-label">Default Location:</div><div class="history-value">{location}</div></div>'
-                mem_html += f'<div class="history-item"><div class="history-label">Medical Alerts / Allergies:</div><div class="history-value">{allergies}</div></div>'
-                mem_html += f'<div class="history-item"><div class="history-label">Medical Conditions:</div><div class="history-value">{conditions}</div></div>'
-                mem_html += f'<div class="history-item"><div class="history-label">Emergency Contact:</div><div class="history-value">{emergency_contact}</div></div>'
-                mem_html += '</div>'
-                st.markdown(mem_html, unsafe_allow_html=True)
-            
-                # 7. Past Request Memory Context
-                past_emergencies = controller.session_memory.get_past_emergencies()
-                if past_emergencies:
-                    st.markdown(f"#### 🕒 Past Request Memory Context")
-                    past_html = '<div class="history-container">'
-                    for entry in reversed(past_emergencies[-5:]):
-                        cat = entry.get("category", "General Support")
-                        pri = entry.get("priority", "MEDIUM")
-                        cit = entry.get("city", "Unknown")
-                    
-                        past_html += f'<div class="history-card" style="padding: 10px; margin-bottom: 8px;">'
-                        past_html += f'<div style="font-size:0.95rem; font-weight:bold; margin-bottom:4px; color:#1F2937;">{cat} (Priority Level: {pri})</div>'
-                        past_html += f'<div style="font-size:0.85rem; color:#64748B;">Emergency resolved in {cit}.</div>'
-                        past_html += '</div>'
-                    past_html += '</div>'
-                    st.markdown(past_html, unsafe_allow_html=True)
 
 
 
