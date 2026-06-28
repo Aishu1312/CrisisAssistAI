@@ -790,9 +790,7 @@ with tab_console:
     with col_response:
         res = st.session_state.result
         
-        if res:
         
-
         # Real-time Agent workflow nodes visualization
         st.markdown(f"### {trans.get('agent_pipeline_status', lang_code)}")
         

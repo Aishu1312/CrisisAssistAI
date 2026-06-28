@@ -12,13 +12,13 @@ During emergencies, every second counts. Traditional emergency response systems 
 
 CrisisAssist AI solves this problem by using a robust **Multi-Agent Architecture**. It listens to emergency requests (via text or audio), instantly assesses priority, factors in user memory (like medical conditions and exact location), and outputs clear, actionable safety instructions alongside verified, hyper-local emergency resources. With built-in fallback mechanisms and translation support for 28 languages, it ensures immediate, inclusive, and fail-safe assistance.
 
-![Home Page Screenshot](./assets/home_page_placeholder.png)
+![Home Page Screenshot](./assets/cover_image.png)
 
 ## 3. Multi-Agent Architecture
 
 The system utilizes an Agent-to-Agent (A2A) protocol where specialized agents communicate to complete the emergency response lifecycle. The architecture prevents hallucinations in critical scenarios by using a tripartite review system.
 
-![Agent Pipeline Screenshot](./assets/agent_pipeline_placeholder.png)
+![Agent Pipeline Screenshot](./assets/traditional_vs_crisisassist.png)
 
 ## 4. Planner Agent
 
@@ -35,7 +35,7 @@ The **Worker Agent** executes the plan constructed by the Planner.
 - **Guidance Generation:** Generates actionable safety advice tailored to the specific emergency type.
 - **Context Injection:** Integrates the user's specific medical memory and profile data to ensure instructions are safe for their conditions.
 
-![Emergency Response Screenshot](./assets/emergency_response_placeholder.png)
+![Emergency Response Screenshot](./assets/emergency_response_architecture.png)
 
 ## 6. Evaluator Agent
 
@@ -63,7 +63,7 @@ The system uses advanced context engineering to ensure agents have precisely the
 - **Maps Tool / Location Tool:** Resolves coordinates to verified emergency services.
 - **Translation Tool:** Provides dynamic support across 28 local languages.
 
-![Verified Resources Screenshot](./assets/verified_resources_placeholder.png)
+![Verified Resources Screenshot](./assets/workflow.png)
 
 ## 10. A2A Communication
 
@@ -76,7 +76,7 @@ Agents pass structured `AgentMessage` objects back and forth. The main controlle
 - **Explainable AI:** Provides clear "Response Reasoning" to the user, explaining exactly how a priority was assessed and resources verified.
 - **Agent Observability:** Detailed telemetry logs track latency, validation scores, and failure rates (safely tucked away in an expander for admin use).
 
-![Observability Screenshot](./assets/observability_placeholder.png)
+![Observability Screenshot](./assets/how_it_works.jpg)
 
 ## 12. Deployment Instructions
 
