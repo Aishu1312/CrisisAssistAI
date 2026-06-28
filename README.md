@@ -1,97 +1,111 @@
-# CrisisAssist AI
+# CrisisAssist AI — Trustworthy Multi-Agent Emergency Support Companion
 
-![CrisisAssist AI](https://img.shields.io/badge/Google-Kaggle%20Capstone-blue) ![Agents For Good](https://img.shields.io/badge/Track-Agents%20For%20Good-success) ![Python](https://img.shields.io/badge/Python-3.9+-blue.svg) ![Streamlit](https://img.shields.io/badge/UI-Streamlit-red.svg)
-
-CrisisAssist AI is a trustworthy, multi-agent emergency support companion built for the **Google x Kaggle 5-Day AI Agents Intensive Capstone (Agents for Good Track)**. It intelligently triages crisis situations, provides actionable localized safety guidelines, verifies real-world emergency resources, and operates seamlessly across 28 global languages via both text and voice.
-
-## 🎯 Problem Statement
-
-During an emergency (e.g., natural disasters, medical crises, personal safety threats), individuals often face:
-1. **Information Overload:** Struggling to find exact, life-saving steps in the heat of the moment.
-2. **Language Barriers:** First responders or default AI agents may not speak the user's native language.
-3. **Resource Uncertainty:** Difficulty locating *verified* and *operational* emergency contacts (hospitals, police stations, shelters).
-4. **Accessibility Constraints:** Inability to type due to injury or panic.
-
-## 💡 Solution Overview
-
-CrisisAssist AI solves these challenges through an orchestrated **Multi-Agent Architecture** powered by Google Gemini 2.5 Flash:
-- **Intelligent Triage:** Instantly categorizes emergencies (e.g., "Personal Safety / Harassment", "Fire Hazard", "Medical Emergency") and assigns dynamic priority levels (CRITICAL, HIGH, MEDIUM).
-- **Localized Actionable Advice:** Generates step-by-step safety checklists explicitly in the user's selected language.
-- **Verified Resource Mapping:** Geocodes the user's location to fetch real-world hospitals, fire stations, and police contacts, complete with an algorithmic "Verification Score" measuring the freshness and validity of the contact.
-- **Voice-First Accessibility:** Full support for multilingual Speech-to-Text and Text-to-Speech (via Google TTS).
-- **Explainable AI (XAI):** A transparent UI panel detailing exactly *why* a specific priority and category were assigned.
+CrisisAssist AI is an advanced, multi-agent AI system designed to act as a trustworthy and instantaneous emergency support companion. Built for the **Google 5-Day AI Agents Intensive Vibe Coding Course (Agents for Good track)**, this project leverages autonomous agents to intelligently process, route, and respond to critical situations, offering a lifeline when it's needed most.
 
 ---
 
-## 🏗️ Multi-Agent Architecture
+## 1. Problem Statement
 
-The system utilizes an A2A (Agent-to-Agent) communication protocol, orchestrating three specialized agents:
+During emergencies, every second counts. Traditional emergency response systems often struggle with language barriers, imprecise location tracking, and high call volumes, leading to delayed assistance. Additionally, users under stress need immediate actionable guidance alongside verified contacts, which standard search engines or singular AI chatbots fail to provide safely and reliably.
 
-1. **Planner Agent 📝**
-   - **Role:** The first line of defense.
-   - **Responsibility:** Parses user input, detects the emergency category, evaluates severity (via regex heuristics and LLM inference), and formulates a strategic execution plan.
+## 2. Solution Overview
 
-2. **Worker Agent ⚙️**
-   - **Role:** The execution engine.
-   - **Responsibility:** Carries out the Planner's steps. It interacts with the `LocationTool` to fetch geo-coordinated resources, calls the `VoiceTool` for audio synthesis, and strictly enforces translation constraints to ensure the output is exclusively in the target language.
+CrisisAssist AI solves this problem by using a robust **Multi-Agent Architecture**. It listens to emergency requests (via text or audio), instantly assesses priority, factors in user memory (like medical conditions and exact location), and outputs clear, actionable safety instructions alongside verified, hyper-local emergency resources. With built-in fallback mechanisms and translation support for 28 languages, it ensures immediate, inclusive, and fail-safe assistance.
 
-3. **Evaluator Agent 🛡️**
-   - **Role:** The safety mechanism.
-   - **Responsibility:** Validates the Worker's response against AI Safety guardrails to ensure no harmful, misleading, or hallucinatory advice is dispatched to a vulnerable user.
+![Home Page Screenshot](./assets/home_page_placeholder.png)
+
+## 3. Multi-Agent Architecture
+
+The system utilizes an Agent-to-Agent (A2A) protocol where specialized agents communicate to complete the emergency response lifecycle. The architecture prevents hallucinations in critical scenarios by using a tripartite review system.
+
+![Agent Pipeline Screenshot](./assets/agent_pipeline_placeholder.png)
+
+## 4. Planner Agent
+
+The **Planner Agent** acts as the system's brain and first responder. 
+- **Triage & Analysis:** Analyzes the incoming emergency request.
+- **Categorization:** Classifies the situation (e.g., Fire Hazard, Medical Emergency, Personal Safety).
+- **Prioritization:** Assigns a priority level (LOW, MEDIUM, HIGH, CRITICAL).
+- **Execution Plan:** Formulates a step-by-step plan for the Worker Agent.
+
+## 5. Worker Agent
+
+The **Worker Agent** executes the plan constructed by the Planner.
+- **Resource Fetching:** Uses tools to fetch verified local emergency resources based on coordinates.
+- **Guidance Generation:** Generates actionable safety advice tailored to the specific emergency type.
+- **Context Injection:** Integrates the user's specific medical memory and profile data to ensure instructions are safe for their conditions.
+
+![Emergency Response Screenshot](./assets/emergency_response_placeholder.png)
+
+## 6. Evaluator Agent
+
+The **Evaluator Agent** provides a critical safety layer, preventing dangerous AI hallucinations.
+- **Safety Review:** Reviews the output from the Worker Agent against safety guidelines.
+- **Verification Score:** Grades the response to ensure accuracy.
+- **Approval Flow:** If a response falls below a safety threshold, it halts the workflow and asks the user for explicit approval, or forces a safe fallback response.
+
+## 7. Memory System
+
+CrisisAssist AI maintains both short-term and long-term memory:
+- **Current User Memory:** A persistent profile storing the user's name, default location, medical alerts/allergies, medical conditions, and emergency contacts.
+- **Past Request Memory Context:** Session-based history that logs resolved emergencies for context in ongoing situations.
+
+## 8. Context Engineering
+
+The system uses advanced context engineering to ensure agents have precisely the right information at the right time. By injecting real-time location data (Browser API / IP fallback), language preferences, and historical memory directly into the prompt context, agents make highly contextualized, rapid decisions without requiring the user to restate crucial details.
+
+## 9. Tools Used
+
+- **Google Gemini API (Gemini 3.1 Pro):** Powers the core intelligence of the agents.
+- **Streamlit:** Provides the interactive, highly responsive, and accessible UI.
+- **Streamlit-JS-Eval:** Fetches precise browser geolocation.
+- **Voice Tool (STT):** Transcribes audio emergency inputs.
+- **Maps Tool / Location Tool:** Resolves coordinates to verified emergency services.
+- **Translation Tool:** Provides dynamic support across 28 local languages.
+
+![Verified Resources Screenshot](./assets/verified_resources_placeholder.png)
+
+## 10. A2A Communication
+
+Agents pass structured `AgentMessage` objects back and forth. The main controller orchestrates the state machine (Planning ➡️ Executing ➡️ Validating), ensuring strict adherence to the response pipeline. The history of this communication is fully auditable.
+
+## 11. Security Features
+
+- **No API Key Exposure:** All secrets are securely managed in `.env` and Streamlit secrets.
+- **Hallucination Prevention:** The Evaluator Agent guarantees safety-critical advice is grounded.
+- **Explainable AI:** Provides clear "Response Reasoning" to the user, explaining exactly how a priority was assessed and resources verified.
+- **Agent Observability:** Detailed telemetry logs track latency, validation scores, and failure rates (safely tucked away in an expander for admin use).
+
+![Observability Screenshot](./assets/observability_placeholder.png)
+
+## 12. Deployment Instructions
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Aishu1312/CrisisAssistAI.git
+   cd CrisisAssistAI
+   ```
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Configure Secrets:**
+   Create a `.streamlit/secrets.toml` or `.env` file and add:
+   ```env
+   GEMINI_API_KEY="your_google_api_key_here"
+   ```
+4. **Run the App Locally:**
+   ```bash
+   streamlit run app.py
+   ```
+5. **Live Deployment:**
+   The app is currently deployed via Streamlit Community Cloud: [CrisisAssist AI Live](https://jb9pe4aoyd9ssqpy3v6thk.streamlit.app/)
+
+## 13. Future Scope
+
+- **Integration with Physical IoT:** Automatically triggering local sirens or unlocking smart doors during detected fires.
+- **Direct Dispatch:** Programmatic integration with real-world PSAP (Public Safety Answering Point) APIs.
+- **Offline Mode:** Local SLMs (Small Language Models) for edge execution when internet connectivity drops.
 
 ---
-
-## 🧠 Memory System
-
-CrisisAssist AI implements a dual-layer memory system:
-- **User Memory (Persistent):** Stores critical static profile information such as Medical Conditions, Allergies, default Locations, and Emergency Contact details.
-- **Session Memory (Dynamic):** Tracks the active state of the current emergency pipeline, preserving the chat history (Past Request Memory Context) to ensure continuity during an ongoing crisis event.
-
----
-
-## 🛠️ Tools & Integrations
-
-- **LocationTool:** Resolves geographic coordinates and maps them to a curated database of verified resources (Hospitals, Police, Fire, Shelters). It implements a robust fallback heuristic (e.g., 1091 for Women's Safety, 112 for Police).
-- **MapsTool:** Generates direct Google Maps deep-links for instant navigation to verified facilities.
-- **VoiceTool:** Integrates `speech_recognition` and `gTTS` to handle 28 diverse languages, providing vital accessibility for injured or visually impaired users.
-- **TranslationTool:** Ensures strict, real-time contextual translation of complex safety protocols without English leakage.
-- **Agent Analytics Dashboard:** Built-in observability tracing LLM execution times, confidence scores, XAI rationales, and fallback triggers.
-
----
-
-## 🚀 Deployment Instructions
-
-CrisisAssist AI is built using **Streamlit** and the **Google GenAI SDK**.
-
-### Prerequisites
-- Python 3.9+
-- A valid Google Gemini API Key
-
-### Local Installation
-```bash
-# 1. Clone the repository
-git clone https://github.com/Aishu1312/CrisisAssistAI.git
-cd CrisisAssistAI
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Configure environment variables
-# Create a .env file and add your key:
-GEMINI_API_KEY="your_api_key_here"
-
-# 4. Run the Streamlit Application
-streamlit run app.py
-```
-
----
-
-## 🔒 Security & AI Safety Features
-
-- **Offline Rule Fallbacks:** If API rate limits (429 RESOURCE_EXHAUSTED) occur, the system gracefully falls back to deterministic rule-based advice and hardcoded national emergency numbers.
-- **Explainability Panel:** Every decision is traced and displayed in the UI, ensuring end-users understand the agent's logic.
-- **Evaluator Guardrails:** The dedicated Evaluator Agent explicitly blocks advice that could exacerbate injuries (e.g., suggesting incorrect medical procedures).
-
----
-
-*Developed for the Google x Kaggle Agents For Good Capstone. Let's build AI that saves lives.*
+*Built with ❤️ for the Agents for Good track.*
