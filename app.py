@@ -785,7 +785,7 @@ with tab_console:
 
 
  
-        if res is not None:
+        if st.session_state.result is not None:
             # 6. Current User Memory
             profile_data = controller.user_memory.get_profile()
             name = profile_data.get("name", "").strip() or "Unknown"
