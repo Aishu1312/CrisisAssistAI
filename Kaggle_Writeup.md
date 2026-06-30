@@ -1,6 +1,6 @@
 # Kaggle Capstone Writeup: CrisisAssist AI
 ### Track: Agents for Good
-**Author:** CrisisAssist AI Development Team  
+**Author:** Aishwarya Lala
 **Workspace ID:** `CrisisAssistAI_Multi_Agent_Capstone_Project`
 
 ---
