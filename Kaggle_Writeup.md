@@ -1,6 +1,8 @@
 # Title
 CrisisAssist AI — Trustworthy Multi-Agent Emergency Response Companion
 
+**Author:** Aishwarya Lala
+
 # Executive Summary
 During a crisis, seconds dictate outcomes, yet the primary bottleneck in emergency response remains information overload and delayed decision-making. **CrisisAssist AI** is a trustworthy, multi-agent intelligence system engineered to transform how citizens and first responders navigate critical situations. By shifting away from standard monolithic chatbots to a rigorous **Planner → Worker → Evaluator** multi-agent architecture, our system guarantees factual correctness, real-time verified local resources, and mathematically bounded safety guardrails. We bridge the gap between chaotic real-world emergencies and actionable, life-saving intelligence, ensuring inclusive access through 28-language support, speech-to-text integration, and hyper-local contextual awareness.
 
